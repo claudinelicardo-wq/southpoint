@@ -16,17 +16,17 @@ tests/manual QA pass — not merely when the page renders.
 - [x] DB tests: permissions, audit immutability, settings gating
 
 ## Phase 2 — Catalog & inventory
-- [ ] Migration: units, categories, products, variants, modifiers, inventory items/batches/movements, recipes
-- [ ] Unit conversion function + validation tests
-- [ ] Ledger functions: add_stock / consume_stock (FEFO, WAC, negative-stock policy, expired exclusion)
-- [ ] Menu management UI (prepared items, variants, modifiers, photos)
-- [ ] Retail products UI (barcode/SKU, linked inventory)
-- [ ] Ingredients & recipe editor with live cost + margin display
-- [ ] Opening stock entry; low-stock warnings
-- [ ] DB tests: conversions, WAC math, FEFO, reconciliation
+- [x] Migration: units, categories, products, variants, modifiers, inventory items/batches/movements, recipes
+- [x] Unit conversion function + validation tests
+- [x] Ledger functions: add_stock / consume_stock (FEFO, WAC, negative-stock policy, expired exclusion)
+- [x] Menu management UI (prepared items, variants, modifiers, photos)
+- [x] Retail products UI (barcode/SKU, linked inventory)
+- [x] Ingredients & recipe editor with live cost + margin display
+- [x] Opening stock entry; low-stock warnings
+- [x] DB tests: conversions, WAC math, FEFO, reconciliation
 
 ## Phase 3 — POS
-- [ ] pos_post_order + pos_complete_sale RPCs (idempotent, server-priced)
+- [x] pos_post_order + pos_complete_sale RPCs (idempotent, server-priced)
 - [ ] Tablet-first POS screen (categories, search, tiles, cart, modifiers, notes, discounts)
 - [ ] Order types incl. courtside labels; hold/resume; clear
 - [ ] Open tabs (create, add orders, partial settle, close, reopen w/ manager auth, transfer/merge)
