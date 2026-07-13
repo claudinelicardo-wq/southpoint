@@ -70,7 +70,7 @@ export function KDSBoard({
 }) {
   const router = useRouter();
   const [station, setStation] = useState<"all" | "bar" | "kitchen">("all");
-  const [now, setNow] = useState(Date.now());
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
 
   // Elapsed-time ticker.
@@ -171,9 +171,7 @@ export function KDSBoard({
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {tickets.map(({ order, station: st, items }) => {
-            const oldest = Math.min(
-              ...items.map((i) => new Date(order.completed_at).getTime()),
-            );
+            const oldest = new Date(order.completed_at).getTime();
             const elapsedMin = Math.max(0, Math.floor((now - oldest) / 60_000));
             const allReady = items.every((i) => i.prep_status === "ready");
             const context =

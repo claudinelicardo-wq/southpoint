@@ -412,6 +412,13 @@ begin
           raise exception 'complimentary orders need manager authorization';
         end if;
         v_disc_amount := v_subtotal - v_discount_total;
+      elsif v_dtype = 'loyalty' then
+        -- Defined in migration 0009; rolls back with the order on any failure.
+        if v_hold then
+          raise exception 'loyalty redemption cannot be used on held orders';
+        end if;
+        v_disc_amount := public.loyalty_redeem(
+          v_order_id, v_customer, v_value, v_subtotal - v_discount_total);
       else
         raise exception 'unsupported discount type %', v_dtype;
       end if;

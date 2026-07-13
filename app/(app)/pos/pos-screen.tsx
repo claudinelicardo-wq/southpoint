@@ -97,10 +97,13 @@ export function POSScreen({
   const [success, setSuccess] = useState<{ orderNumber: string; orderId: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Restore the unsent cart after refresh/crash.
+  // Restore the unsent cart after refresh/crash. This runs once on mount:
+  // localStorage is unavailable during SSR, so a lazy useState initializer
+  // can't be used here — hydrating from an effect is the SSR-safe pattern.
   useEffect(() => {
     try {
       const raw = localStorage.getItem(CART_KEY);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- one-time localStorage hydration; safe and intentional
       if (raw) setCart({ ...EMPTY_CART, ...(JSON.parse(raw) as CartState) });
     } catch {
       // corrupted cart — start fresh

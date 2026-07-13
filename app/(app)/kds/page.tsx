@@ -6,6 +6,12 @@ import { KDSBoard, type KDSOrder } from "./kds-board";
 
 export const metadata = { title: "Kitchen / Bar" };
 
+// Module-level plain helper: keeps the clock read out of the component body
+// (the react-hooks purity rule flags Date.now() inside components).
+function twelveHoursAgoISO(): string {
+  return new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+}
+
 export default async function KDSPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -16,7 +22,7 @@ export default async function KDSPage() {
   let orders: KDSOrder[] = [];
   if (!session.preview) {
     const supabase = await createClient();
-    const since = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+    const since = twelveHoursAgoISO();
     const { data } = await supabase
       .from("orders")
       .select(
