@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "south-point",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "/Volumes/My Book 2/Claude Playground/south-point",
+      "port": 3000
+    }
+  ]
+}

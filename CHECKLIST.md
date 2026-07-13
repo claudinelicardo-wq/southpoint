@@ -4,16 +4,16 @@ Progress tracker. A box is checked only when the feature works against the datab
 tests/manual QA pass — not merely when the page renders.
 
 ## Phase 1 — Foundation
-- [ ] Next.js 16 scaffold, TS strict, Tailwind 4, git repo
-- [ ] Supabase client/server/proxy wiring + env configuration (`.env.example`)
-- [ ] Local Postgres verification harness (`scripts/db.sh`, stub auth schema)
-- [ ] Migration 0001: profiles, role_permissions, settings, audit_logs, doc_counters, helpers, RLS
-- [ ] Login page + protected routes + role-aware navigation shell
-- [ ] Design system (tokens, buttons, inputs, cards, dialogs, tables, badges, alerts, empty states)
-- [ ] Settings module (business profile, tax, receipt, policies) — owner-gated writes
-- [ ] Staff management (invite/activate/deactivate, role assignment) — owner-gated
-- [ ] Audit log viewer (owner)
-- [ ] DB tests: permissions, audit immutability, settings gating
+- [x] Next.js 16 scaffold, TS strict, Tailwind 4, git repo
+- [x] Supabase client/server/proxy wiring + env configuration (`.env.example`)
+- [x] Local Postgres verification harness (`scripts/db.sh`, stub auth schema)
+- [x] Migration 0001: profiles, role_permissions, settings, audit_logs, doc_counters, helpers, RLS
+- [x] Login page + protected routes + role-aware navigation shell
+- [x] Design system (tokens, buttons, inputs, cards, dialogs, tables, badges, alerts, empty states)
+- [x] Settings module (business profile, tax, receipt, policies) — owner-gated writes
+- [x] Staff management (invite/activate/deactivate, role assignment) — owner-gated
+- [x] Audit log viewer (owner)
+- [x] DB tests: permissions, audit immutability, settings gating
 
 ## Phase 2 — Catalog & inventory
 - [ ] Migration: units, categories, products, variants, modifiers, inventory items/batches/movements, recipes
