@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/*
+  South Point design tokens.
+  Warm neighborhood café + a restrained court-green sporty accent.
+*/
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --cream: #faf6f0;
+  --paper: #ffffff;
+  --sand: #f1e9dd;
+  --espresso: #2e2620;
+  --roast: #4a3f35;
+  --latte: #8a7a68;
+  --line: #e6dccd;
+  --court: #2f7d5c; /* pickleball court green */
+  --court-deep: #246147;
+  --court-soft: #e3f0e9;
+  --clay: #c96f4a; /* warm terracotta accent */
+  --clay-soft: #f7e6dd;
+  --danger: #b3402e;
+  --danger-soft: #f9e4df;
+  --ok: #2f7d5c;
+  --info: #33638c;
+  --info-soft: #e3ecf4;
+  --amber: #a8730a;
+  --amber-soft: #f7edd8;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-cream: var(--cream);
+  --color-paper: var(--paper);
+  --color-sand: var(--sand);
+  --color-espresso: var(--espresso);
+  --color-roast: var(--roast);
+  --color-latte: var(--latte);
+  --color-line: var(--line);
+  --color-court: var(--court);
+  --color-court-deep: var(--court-deep);
+  --color-court-soft: var(--court-soft);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-ok: var(--ok);
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+  --color-amber: var(--amber);
+  --color-amber-soft: var(--amber-soft);
+  --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-fraunces), Georgia, serif;
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 2px rgb(46 38 32 / 0.05), 0 4px 16px rgb(46 38 32 / 0.06);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--cream);
+  color: var(--espresso);
+  font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+/* Larger tap targets on coarse pointers (tablet POS). */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a.tap,
+  input,
+  select {
+    min-height: 44px;
+  }
+}
+
+/* Thermal receipt printing (58mm / 80mm) — applied on the receipt route. */
+@media print {
+  body {
+    background: #fff;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .print-receipt {
+    width: var(--receipt-width, 58mm);
+    font-size: 11px;
+    color: #000;
+  }
 }
