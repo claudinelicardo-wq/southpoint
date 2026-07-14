@@ -30,16 +30,37 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
+// Origin of the Supabase project, if configured. Every authenticated page's
+// first action is a request here, so we warm the connection (DNS + TCP + TLS)
+// ahead of time to take it off the critical path. React 19 hoists these hints
+// into <head> and dedupes them.
+function supabaseOrigin(): string | null {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!url) return null;
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const origin = supabaseOrigin();
   return (
     <html
       lang="en"
       className={`${dmSans.variable} ${fredoka.variable} h-full antialiased`}
     >
+      {origin && (
+        <>
+          <link rel="preconnect" href={origin} crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href={origin} />
+        </>
+      )}
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );
