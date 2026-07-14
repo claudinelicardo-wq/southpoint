@@ -107,7 +107,7 @@ function MenuItems({
       <div className="space-y-4">
         <EmptyState
           title="No menu items yet"
-          description="Add your first prepared item — drinks, meals, snacks. Retail goods live under Products."
+          description="Add your first prepared item: drinks, meals, snacks. Retail goods live under Products."
           action={
             <Button onClick={() => setEditing("new")} disabled={preview}>
               Add menu item
@@ -431,7 +431,7 @@ function ProductDialog({
               );
             })}
             {groups.length === 0 && (
-              <span className="text-sm text-latte">No modifier groups yet — create them in the Modifiers tab.</span>
+              <span className="text-sm text-latte">No modifier groups yet. Create them in the Modifiers tab.</span>
             )}
           </div>
         </Field>

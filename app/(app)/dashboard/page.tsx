@@ -313,7 +313,7 @@ export default async function DashboardPage() {
           {sales && sales.orders === 0 && (
             <EmptyState
               title="No sales yet today"
-              description="Completed POS sales will appear here in real numbers — no demo data."
+              description="Completed POS sales will appear here in real numbers, never demo data."
             />
           )}
         </div>

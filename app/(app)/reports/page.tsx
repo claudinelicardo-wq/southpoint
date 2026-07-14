@@ -111,7 +111,7 @@ export default async function ReportsPage({
       {session.preview ? (
         <EmptyState
           title="Connect a database"
-          description="Reports read from posted sales — connect Supabase to see live figures."
+          description="Reports read from posted sales. Connect Supabase to see live figures."
         />
       ) : (
         <div className="space-y-5">
@@ -149,7 +149,7 @@ export default async function ReportsPage({
               {rows.length === 0 ? (
                 <EmptyState
                   title="No sales in this range"
-                  description="Try a different date range — only completed sales appear here."
+                  description="Try a different date range. Only completed sales appear here."
                 />
               ) : (
                 <Table>

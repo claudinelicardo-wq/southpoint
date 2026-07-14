@@ -154,7 +154,7 @@ export function SuppliersManager({
       {suppliers.length === 0 ? (
         <EmptyState
           title="No suppliers yet"
-          description="Add the vendors you buy from — purchase orders and payables are tracked per supplier."
+          description="Add the vendors you buy from. Purchase orders and payables are tracked per supplier."
           action={
             <Button onClick={openNew} disabled={preview}>
               Add supplier

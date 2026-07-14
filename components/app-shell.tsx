@@ -200,7 +200,7 @@ export function AppShell({
           <div className="ml-auto flex items-center gap-3">
             {preview && (
               <span className="rounded-full bg-amber-soft px-3 py-1 text-xs font-semibold text-amber">
-                UI preview — no database connected
+                UI preview: no database connected
               </span>
             )}
             <span
@@ -208,7 +208,7 @@ export function AppShell({
                 "inline-flex items-center gap-1.5 text-xs font-medium",
                 online ? "text-grass-deep" : "text-danger",
               )}
-              title={online ? "Online" : "Offline — sales cannot be posted"}
+              title={online ? "Online" : "Offline: sales cannot be posted"}
             >
               {online ? <Wifi className="size-4" /> : <WifiOff className="size-4" />}
               {online ? "Online" : "Offline"}

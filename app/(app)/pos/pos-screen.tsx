@@ -257,7 +257,7 @@ export function POSScreen({
       <div className="flex min-w-0 flex-1 flex-col">
         {preview && (
           <Alert tone="warning" className="mb-3">
-            POS needs a connected Supabase project — tiles below are empty.
+            POS needs a connected Supabase project. Tiles below are empty.
           </Alert>
         )}
         {needsShift && (

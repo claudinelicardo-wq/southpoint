@@ -231,7 +231,7 @@ export function CustomersManager({
         open={formOpen}
         onClose={() => setFormOpen(false)}
         title={editing ? `Edit ${editing.full_name}` : "Add customer"}
-        description={editing ? undefined : "A digital profile — no physical card needed."}
+        description={editing ? undefined : "A digital profile, no physical card needed."}
       >
         <form onSubmit={save} className="space-y-4">
           {error && <Alert tone="danger">{error}</Alert>}
@@ -339,7 +339,7 @@ function AdjustPointsDialog({
     <Dialog
       open
       onClose={onClose}
-      title={`Adjust points — ${customer.full_name}`}
+      title={`Adjust points: ${customer.full_name}`}
       description={`Current balance: ${formatQty(currentPoints)} points. Adjustments are audited.`}
     >
       <form onSubmit={submit} className="space-y-4">

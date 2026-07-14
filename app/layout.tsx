@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · South Point",
   },
   description:
-    "Operations system for South Point Cafe & Lounge — POS, inventory, purchasing, shifts, loyalty, and reports.",
+    "Operations system for South Point Cafe & Lounge: POS, inventory, purchasing, shifts, loyalty, and reports.",
   applicationName: "South Point",
 };
 

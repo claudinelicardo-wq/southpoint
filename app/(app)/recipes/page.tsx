@@ -92,7 +92,7 @@ export default async function RecipesPage() {
         {rows.length === 0 ? (
           <EmptyState
             title="No prepared products yet"
-            description="Create prepared items under Menu first — then define their recipes here to track cost and margin."
+            description="Create prepared items under Menu first, then define their recipes here to track cost and margin."
           />
         ) : (
           <Table>

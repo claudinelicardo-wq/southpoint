@@ -62,7 +62,7 @@ export function ModifierManager({
       {groups.length === 0 ? (
         <EmptyState
           title="No modifier groups yet"
-          description="Modifier groups let customers customize items — milk choice, extra shots, sugar level."
+          description="Modifier groups let customers customize items: milk choice, extra shots, sugar level."
         />
       ) : (
         <div className="grid gap-4 lg:grid-cols-2">

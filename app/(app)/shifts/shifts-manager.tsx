@@ -507,7 +507,7 @@ export function ShiftsManager({
               onChange={(e) => setMove({ ...move, amount: e.target.value })}
             />
           </Field>
-          <Field label="Reason" hint="Required — recorded in the audit log.">
+          <Field label="Reason" hint="Required; recorded in the audit log.">
             <Input
               required
               value={move.reason}

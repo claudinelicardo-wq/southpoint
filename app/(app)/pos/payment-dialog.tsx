@@ -85,7 +85,7 @@ export function PaymentDialog({
   }
 
   return (
-    <Dialog open onClose={onClose} title={`Take payment — ${formatPeso(total)}`} className="max-w-xl">
+    <Dialog open onClose={onClose} title={`Take payment: ${formatPeso(total)}`} className="max-w-xl">
       <div className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}
         {rows.map((row, i) => {

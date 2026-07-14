@@ -93,7 +93,7 @@ export default function LoginPage() {
           <h1 className="sr-only">Sign in to South Point Cafe &amp; Lounge</h1>
           <Wordmark size="lg" />
           <p className="mt-5 text-sm text-latte">
-            Courtside café · Convenience store · Pickleball lounge
+            Courtside cafe · Convenience store · Pickleball lounge
           </p>
         </div>
         <div className="rounded-2xl border border-line bg-paper p-6 shadow-(--shadow-card)">

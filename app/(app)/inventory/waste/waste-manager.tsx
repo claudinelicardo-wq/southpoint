@@ -153,7 +153,7 @@ export function WasteManager({
       {pendingCount > 0 && (
         <Alert tone="warning">
           {pendingCount} waste {pendingCount === 1 ? "record" : "records"} pending approval
-          {canApprove ? " — review below." : "."}
+          {canApprove ? ", review below." : "."}
         </Alert>
       )}
 
@@ -336,7 +336,7 @@ function ReportWasteDialog({
       open
       onClose={onClose}
       title="Report waste"
-      description="Approved waste deducts inventory at cost — prepared items deduct their recipe."
+      description="Approved waste deducts inventory at cost. Prepared items deduct their recipe."
     >
       <form onSubmit={submit} className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}

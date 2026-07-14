@@ -266,7 +266,7 @@ function TaxForm({
   return (
     <SectionCard
       title="Tax & service charge"
-      description="VAT registration, pricing mode, and Senior Citizen / PWD treatment. Align these with your accountant — historical sales keep the tax snapshot they were posted with."
+      description="VAT registration, pricing mode, and Senior Citizen / PWD treatment. Align these with your accountant. Historical sales keep the tax snapshot they were posted with."
       ownerOnly={ownerOnly}
     >
       <form

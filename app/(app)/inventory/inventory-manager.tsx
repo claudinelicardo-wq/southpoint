@@ -174,7 +174,7 @@ export function InventoryManager({
 
     const delta = Number(adjust.qty_delta);
     if (!Number.isFinite(delta) || delta === 0) {
-      setAdjustError("Enter a nonzero quantity — positive receives, negative deducts.");
+      setAdjustError("Enter a nonzero quantity. Positive receives, negative deducts.");
       return;
     }
 
@@ -338,7 +338,7 @@ export function InventoryManager({
         description={
           editing
             ? undefined
-            : "Stock starts at zero — receive quantities with an adjustment or purchase."
+            : "Stock starts at zero. Receive quantities with an adjustment or purchase."
         }
       >
         <form onSubmit={saveItem} className="space-y-4">
@@ -498,7 +498,7 @@ export function InventoryManager({
               onChange={(e) => setAdjust({ ...adjust, qty_delta: e.target.value })}
             />
           </Field>
-          <Field label="Reason" hint="Required — recorded in the movement ledger.">
+          <Field label="Reason" hint="Required; recorded in the movement ledger.">
             <Input
               required
               value={adjust.reason}
@@ -527,7 +527,7 @@ export function InventoryManager({
             </Field>
           )}
           {showReceiveFields && adjusting?.track_expiry && (
-            <Field label="Expiry date" hint="Optional — applies to the received batch.">
+            <Field label="Expiry date" hint="Optional; applies to the received batch.">
               <Input
                 type="date"
                 value={adjust.expires}

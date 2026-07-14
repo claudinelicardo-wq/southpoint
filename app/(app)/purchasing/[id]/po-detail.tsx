@@ -160,7 +160,7 @@ export function PoDetail({
       setError(dbError.message);
       return;
     }
-    setSuccess("Purchase order marked as sent — it can now receive deliveries.");
+    setSuccess("Purchase order marked as sent. It can now receive deliveries.");
     router.refresh();
   }
 
@@ -639,7 +639,7 @@ export function PoDetail({
         onClose={() => setCancelOpen(false)}
         onConfirm={cancelPo}
         title={`Cancel ${po.po_number}`}
-        message="Cancelling permanently closes this draft — it cannot be sent or received afterwards."
+        message="Cancelling permanently closes this draft. It cannot be sent or received afterwards."
         confirmLabel="Cancel PO"
         loading={busy === "cancel"}
       />
@@ -861,7 +861,7 @@ function AddLineForm({
             {catalog.map((c) => (
               <option key={c.id} value={c.id}>
                 {c.name}
-                {c.purchase_unit_label ? ` — ${c.purchase_unit_label}` : ""}
+                {c.purchase_unit_label ? ` · ${c.purchase_unit_label}` : ""}
               </option>
             ))}
           </Select>
@@ -1011,7 +1011,7 @@ function ReceiveDialog({
     }
     const result = data as { gr_number: string; status: PoStatus };
     onSuccess(
-      `Delivery recorded as ${result.gr_number} — the order is now ${PO_STATUS_BADGES[result.status].label.toLowerCase()}.`,
+      `Delivery recorded as ${result.gr_number}. The order is now ${PO_STATUS_BADGES[result.status].label.toLowerCase()}.`,
     );
     router.refresh();
   }
@@ -1020,7 +1020,7 @@ function ReceiveDialog({
     <Dialog
       open
       onClose={onClose}
-      title={`Receive delivery — ${po.po_number}`}
+      title={`Receive delivery: ${po.po_number}`}
       description="Quantities are in purchase units. Received stock is converted to base units and posted to inventory."
       className="max-w-2xl"
     >
@@ -1088,7 +1088,7 @@ function ReceiveDialog({
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Landed cost (₱)"
-            hint="Freight and handling — allocated across received lines by value."
+            hint="Freight and handling, allocated across received lines by value."
           >
             <Input
               type="number"
@@ -1174,7 +1174,7 @@ function PaymentDialog({
     <Dialog
       open
       onClose={onClose}
-      title={`Record payment — ${po.po_number}`}
+      title={`Record payment: ${po.po_number}`}
       description={`Outstanding balance: ${formatPeso(balance)}`}
     >
       <form onSubmit={submit} className="space-y-4">

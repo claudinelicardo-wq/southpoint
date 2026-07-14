@@ -189,7 +189,7 @@ export default async function InventoryDetailPage({
           {movements.length === 0 ? (
             <EmptyState
               title="No movements yet"
-              description="Every stock change — receipts, sales, waste, and adjustments — is recorded here."
+              description="Every stock change (receipts, sales, waste, and adjustments) is recorded here."
             />
           ) : (
             <Table>

@@ -166,7 +166,7 @@ export function PurchasingManager({
       {orders.length === 0 ? (
         <EmptyState
           title="No purchase orders yet"
-          description="Create a purchase order to restock inventory — receiving a delivery updates stock and costs automatically."
+          description="Create a purchase order to restock inventory. Receiving a delivery updates stock and costs automatically."
           action={
             canManage ? (
               <Button onClick={() => setCreateOpen(true)} disabled={preview}>
@@ -295,13 +295,13 @@ function CreatePoDialog({
       open
       onClose={onClose}
       title="New purchase order"
-      description="Starts as a draft — add line items on the next screen, then mark it as sent."
+      description="Starts as a draft. Add line items on the next screen, then mark it as sent."
     >
       <form onSubmit={submit} className="space-y-4">
         {error && <Alert tone="danger">{error}</Alert>}
         {suppliers.length === 0 ? (
           <Alert tone="warning">
-            Add a supplier first — purchase orders are placed with a supplier.
+            Add a supplier first. Purchase orders are placed with a supplier.
           </Alert>
         ) : (
           <Field label="Supplier">

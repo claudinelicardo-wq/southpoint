@@ -58,7 +58,7 @@ export default async function MenuPage() {
     <div>
       <PageHeader
         title="Menu"
-        description="Prepared café items, variants, and modifiers. Recipes are managed under Recipes."
+        description="Prepared cafe items, variants, and modifiers. Recipes are managed under Recipes."
       />
       <MenuManager
         categories={categories}

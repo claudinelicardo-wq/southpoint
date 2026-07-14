@@ -145,7 +145,7 @@ export function RecipeEditor({
         {error && !addOpen && !removing && <Alert tone="danger">{error}</Alert>}
         {items.length === 0 && (
           <Alert tone="warning">
-            No active inventory items exist yet — add ingredients under Inventory first.
+            No active inventory items exist yet. Add ingredients under Inventory first.
           </Alert>
         )}
 

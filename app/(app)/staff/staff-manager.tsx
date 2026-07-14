@@ -104,7 +104,7 @@ export function StaffManager({
       {staff.length === 0 ? (
         <EmptyState
           title="No staff yet"
-          description="Add your team — each person gets their own login and role-based access."
+          description="Add your team. Each person gets their own login and role-based access."
         />
       ) : (
         <Table>

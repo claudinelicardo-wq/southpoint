@@ -38,7 +38,7 @@ export default async function AuditLogsPage() {
       {logs.length === 0 ? (
         <EmptyState
           title="No audit entries yet"
-          description="Sensitive actions — settings changes, role changes, voids, refunds, stock adjustments — will be recorded here automatically."
+          description="Sensitive actions (settings changes, role changes, voids, refunds, stock adjustments) are recorded here automatically."
         />
       ) : (
         <Table>

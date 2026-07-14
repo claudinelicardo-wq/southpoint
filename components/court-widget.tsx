@@ -207,7 +207,7 @@ function CourtSessionDialog({
               onChange={(e) => setHours(Number(e.target.value))}
             />
           </Field>
-          <Field label="Link a café tab (optional)">
+          <Field label="Link a cafe tab (optional)">
             <Select value={tabId} onChange={(e) => setTabId(e.target.value)}>
               <option value="">No tab</option>
               {openTabs.map((t) => (
