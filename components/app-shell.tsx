@@ -8,10 +8,9 @@ import { createClient } from "@/lib/supabase/client";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Wordmark } from "./wordmark";
 import { LogOut, Menu, Wifi, WifiOff } from "lucide-react";
-import { useEffect } from "react";
 
 const SECTION_LABELS: Record<NavItem["section"], string> = {
   operate: "Operate",
@@ -50,6 +49,27 @@ export function AppShell({
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const online = useOnline();
+  const drawerRef = useRef<HTMLElement>(null);
+  const menuBtnRef = useRef<HTMLButtonElement>(null);
+
+  // Mobile drawer: lock scroll, move focus in, close on Escape, and return
+  // focus to the trigger when it closes.
+  useEffect(() => {
+    if (!mobileOpen) return;
+    const trigger = menuBtnRef.current; // stable node; focus returns here on close
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    drawerRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMobileOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+      trigger?.focus();
+    };
+  }, [mobileOpen]);
 
   const nav = useMemo(
     () => visibleNav(profile.role, new Set(permissions)),
@@ -89,6 +109,7 @@ export function AppShell({
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    aria-current={active ? "page" : undefined}
                     onClick={() => setMobileOpen(false)}
                     className={cn(
                       "tap block rounded-xl px-3 py-2 text-sm font-medium transition-colors",
@@ -126,6 +147,7 @@ export function AppShell({
             </div>
             <button
               onClick={signOut}
+              aria-label="Sign out"
               title="Sign out"
               className="rounded-lg p-2 text-latte hover:bg-sand hover:text-roast"
             >
@@ -142,7 +164,15 @@ export function AppShell({
             className="absolute inset-0 bg-espresso/40"
             onClick={() => setMobileOpen(false)}
           />
-          <aside className="absolute inset-y-0 left-0 flex w-72 flex-col bg-paper shadow-xl">
+          <aside
+            ref={drawerRef}
+            id="mobile-nav"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation"
+            tabIndex={-1}
+            className="absolute inset-y-0 left-0 flex w-72 flex-col bg-paper shadow-xl outline-none"
+          >
             <div className="flex items-center justify-between border-b border-line px-5 py-4">
               <Wordmark size="sm" />
             </div>
@@ -155,9 +185,12 @@ export function AppShell({
         {/* Top bar */}
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-line bg-cream/90 px-4 py-3 backdrop-blur lg:px-8">
           <button
+            ref={menuBtnRef}
             className="rounded-lg p-2 text-roast hover:bg-sand lg:hidden"
             onClick={() => setMobileOpen(true)}
             aria-label="Open navigation"
+            aria-controls="mobile-nav"
+            aria-expanded={mobileOpen}
           >
             <Menu className="size-5" />
           </button>
@@ -173,7 +206,7 @@ export function AppShell({
             <span
               className={cn(
                 "inline-flex items-center gap-1.5 text-xs font-medium",
-                online ? "text-court-deep" : "text-danger",
+                online ? "text-grass-deep" : "text-danger",
               )}
               title={online ? "Online" : "Offline — sales cannot be posted"}
             >

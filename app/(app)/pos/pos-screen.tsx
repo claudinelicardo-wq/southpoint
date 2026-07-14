@@ -321,7 +321,7 @@ export function POSScreen({
                 disabled={disabled}
                 onClick={() => addProduct(p)}
                 className={cn(
-                  "flex min-h-24 flex-col items-start justify-between rounded-2xl border p-3 text-left transition-all",
+                  "flex min-h-24 flex-col items-start justify-between rounded-2xl border p-3 text-left transition",
                   disabled
                     ? "cursor-not-allowed border-line bg-sand/50 opacity-60"
                     : "border-line bg-paper shadow-(--shadow-card) hover:border-court active:scale-[0.98]",

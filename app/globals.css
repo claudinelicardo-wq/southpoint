@@ -84,6 +84,18 @@ body {
   font-family: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
+/* Respect reduced-motion: drop decorative transitions and smooth scroll.
+   Looping animations (e.g. the loading spinner) are left intact — they convey
+   functional status, not decoration. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
 /* Larger tap targets on coarse pointers (tablet POS). */
 @media (pointer: coarse) {
   button,

@@ -25,7 +25,11 @@ export function TH({
   className?: string;
   children?: React.ReactNode;
 }) {
-  return <th className={cn("px-4 py-3", className)}>{children}</th>;
+  return (
+    <th scope="col" className={cn("px-4 py-3", className)}>
+      {children}
+    </th>
+  );
 }
 
 export function TBody({ children }: { children: React.ReactNode }) {

@@ -90,6 +90,7 @@ export default function LoginPage() {
       />
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
+          <h1 className="sr-only">Sign in to South Point Cafe &amp; Lounge</h1>
           <Wordmark size="lg" />
           <p className="mt-5 text-sm text-latte">
             Courtside café · Convenience store · Pickleball lounge
