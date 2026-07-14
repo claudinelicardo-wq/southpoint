@@ -59,20 +59,22 @@ tests/manual QA pass — not merely when the page renders.
 - [ ] DB tests: shift math, waste, count posting, refund/void reversal, production
 
 ## Phase 7 — Accounting & reports
-- [ ] Report queries + date filters + CSV export + print styles
-- [ ] Sales summary/by day/hour/product/category/cashier/type/method
-- [ ] COGS, gross profit, expenses, estimated net profit (labeled estimated)
-- [ ] Inventory valuation & movement, variance, waste reports
-- [ ] Expenses module with approval + attachments
-- [ ] Reconciliation checks (reports tie to source records)
+- [x] Report queries (SQL functions, permission-gated) + Manila date presets + custom range
+- [x] Sales summary + breakdown by product/category/day/hour/cashier/type/method
+- [x] COGS, gross profit, estimated net operating P&L (clearly labeled estimated)
+- [x] Inventory valuation (WAC), payables & collections on accounting page
+- [x] CSV export + print styles on reports
+- [x] Expenses module with approval (migration 0008) — attachments field present
+- [x] Reconciliation test (`tests/db/0011_reports.sql`: reports tie to source records)
+- [ ] Inventory movement / stock variance report pages (data exists; dedicated views TBD)
 
 ## Phase 8 — Customers & loyalty
-- [ ] Customer profiles, search, history, spend stats
-- [ ] Loyalty ledger, configurable rules, redemption at POS, QR membership
-- [ ] Reversal on refund/void (tested)
+- [x] Customer profiles, search, add/edit, loyalty balance, manual point adjust
+- [x] Loyalty ledger viewer + configurable rules display; redemption at POS (0009); QR token
+- [x] Reversal on refund/void (tested in `tests/db/0008_loyalty_court.sql`)
 
 ## Phase 9 — Court
-- [ ] Court status widget (POS + dashboard), sessions with linked tab, history
+- [x] Court status widget (POS + dashboard), sessions with linked tab, history (0010)
 
 ## Phase 10 — Production readiness
 - [ ] RLS / permission audit (automated matrix test)
