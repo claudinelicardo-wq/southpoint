@@ -77,13 +77,17 @@ tests/manual QA pass — not merely when the page renders.
 - [x] Court status widget (POS + dashboard), sessions with linked tab, history (0010)
 
 ## Phase 10 — Production readiness
-- [ ] RLS / permission audit (automated matrix test)
-- [ ] Calculation audit pass
-- [ ] Concurrency tests (parallel stock deduction, duplicate payment)
+- [~] RLS / permission audit — enforced in migrations + tested per-suite; a single
+      consolidated matrix test is still worth adding
+- [x] Calculation audit — WAC, conversions, discounts, refund/void reversal, report
+      reconciliation all covered by DB suites
+- [~] Concurrency tests — idempotency keys + FOR UPDATE locks in place; explicit
+      parallel-deduction test still to add
+- [x] Seed-data removal script (`scripts/remove-seed.sql`, tested + idempotent)
+- [x] docs/DEPLOYMENT.md (GitHub + Supabase + Vercel + first-owner bootstrap +
+      backup/recovery + staff user guide)
 - [ ] Responsive review (tablet POS, mobile management, desktop reports)
-- [ ] PWA manifest + install; offline cart persistence
-- [ ] Seed-data removal script
-- [ ] docs/DEPLOYMENT.md (Supabase + Vercel + GitHub setup), backup/recovery, user guide
+- [ ] PWA manifest + install icons; offline cart persistence (localStorage restore done)
 
 ## External blockers (need owner action)
 - [ ] Create GitHub repository (no `gh` CLI installed / not authenticated)
