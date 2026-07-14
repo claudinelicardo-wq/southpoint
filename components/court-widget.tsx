@@ -73,8 +73,8 @@ export function CourtWidget({
             aria-hidden
             className={cn(
               "size-2.5 rounded-full",
-              status === "available" && "bg-court",
-              status === "in_use" && "bg-amber",
+              status === "available" && "bg-grass",
+              status === "in_use" && "bg-sun-deep",
               status === "reserved" && "bg-info",
               status === "cleaning" && "bg-latte",
               status === "maintenance" && "bg-danger",

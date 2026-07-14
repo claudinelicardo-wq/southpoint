@@ -4,7 +4,7 @@ type Tone = "info" | "success" | "warning" | "danger";
 
 const tones: Record<Tone, string> = {
   info: "bg-info-soft text-info border-info/20",
-  success: "bg-court-soft text-court-deep border-court/20",
+  success: "bg-grass-soft text-grass-deep border-grass/20",
   warning: "bg-amber-soft text-amber border-amber/20",
   danger: "bg-danger-soft text-danger border-danger/20",
 };

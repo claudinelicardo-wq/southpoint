@@ -78,11 +78,20 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <div className="flex min-h-dvh flex-col items-center justify-center px-4 py-10">
+    <div className="relative flex min-h-dvh flex-col items-center justify-center overflow-hidden px-4 py-10">
+      {/* Warm brand backdrop: a soft sun glow up top, a cool court glow below. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 -z-10"
+        style={{
+          background:
+            "radial-gradient(60rem 32rem at 50% -8%, var(--sun-soft), transparent 60%), radial-gradient(52rem 30rem at 50% 115%, var(--court-soft), transparent 62%)",
+        }}
+      />
       <div className="w-full max-w-sm">
-        <div className="mb-8 text-center">
+        <div className="mb-8 flex flex-col items-center text-center">
           <Wordmark size="lg" />
-          <p className="mt-3 text-sm text-latte">
+          <p className="mt-5 text-sm text-latte">
             Courtside café · Convenience store · Pickleball lounge
           </p>
         </div>

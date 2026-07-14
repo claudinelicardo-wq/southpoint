@@ -1,29 +1,49 @@
 @import "tailwindcss";
 
 /*
-  South Point design tokens.
-  Warm neighborhood café + a restrained court-green sporty accent.
+  South Point design tokens — drawn straight from the logo:
+  cobalt blue ("South"), golden sun ("point"), grass green ("cafe and lounge"),
+  on a warm cream ground. Playful and groovy in identity, calm and familiar in
+  structure. All colors in OKLCH; neutrals are tinted warm, brand hues stay
+  saturated. Never pure #000 / #fff.
 */
 :root {
-  --cream: #faf6f0;
-  --paper: #ffffff;
-  --sand: #f1e9dd;
-  --espresso: #2e2620;
-  --roast: #4a3f35;
-  --latte: #8a7a68;
-  --line: #e6dccd;
-  --court: #2f7d5c; /* pickleball court green */
-  --court-deep: #246147;
-  --court-soft: #e3f0e9;
-  --clay: #c96f4a; /* warm terracotta accent */
-  --clay-soft: #f7e6dd;
-  --danger: #b3402e;
-  --danger-soft: #f9e4df;
-  --ok: #2f7d5c;
-  --info: #33638c;
-  --info-soft: #e3ecf4;
-  --amber: #a8730a;
-  --amber-soft: #f7edd8;
+  /* Warm neutral ground */
+  --cream: oklch(0.972 0.014 90); /* app background — the logo's circle */
+  --paper: oklch(0.995 0.004 90); /* cards / raised surfaces */
+  --sand: oklch(0.935 0.02 88); /* subtle fills, neutral badges */
+  --espresso: oklch(0.26 0.02 70); /* primary ink, near-black warm */
+  --roast: oklch(0.42 0.022 68); /* secondary text */
+  --latte: oklch(0.53 0.022 72); /* muted text / captions (AA on cream) */
+  --line: oklch(0.9 0.016 88); /* hairline borders */
+
+  /* Cobalt blue — the primary, interactive color ("South") */
+  --court: oklch(0.5 0.18 268);
+  --court-deep: oklch(0.42 0.16 268);
+  --court-soft: oklch(0.94 0.035 268);
+
+  /* Grass green — positive / available / success ("cafe and lounge") */
+  --grass: oklch(0.64 0.15 150);
+  --grass-deep: oklch(0.49 0.12 150);
+  --grass-soft: oklch(0.93 0.05 150);
+
+  /* Golden sun — highlights, energy, brand fills ("point") */
+  --sun: oklch(0.86 0.12 90);
+  --sun-deep: oklch(0.77 0.12 84);
+  --sun-soft: oklch(0.95 0.06 92);
+
+  /* Warm coral — occasional accent (tab balances, emphasis) */
+  --clay: oklch(0.62 0.14 40);
+  --clay-soft: oklch(0.92 0.05 45);
+
+  /* Semantic status — foregrounds tuned to clear AA (4.5:1) on their soft bg */
+  --danger: oklch(0.5 0.19 27);
+  --danger-soft: oklch(0.93 0.05 30);
+  --ok: var(--grass);
+  --info: oklch(0.49 0.11 245);
+  --info-soft: oklch(0.93 0.035 245);
+  --amber: oklch(0.49 0.1 75); /* readable gold for warning TEXT */
+  --amber-soft: oklch(0.93 0.06 88);
 }
 
 @theme inline {
@@ -37,6 +57,12 @@
   --color-court: var(--court);
   --color-court-deep: var(--court-deep);
   --color-court-soft: var(--court-soft);
+  --color-grass: var(--grass);
+  --color-grass-deep: var(--grass-deep);
+  --color-grass-soft: var(--grass-soft);
+  --color-sun: var(--sun);
+  --color-sun-deep: var(--sun-deep);
+  --color-sun-soft: var(--sun-soft);
   --color-clay: var(--clay);
   --color-clay-soft: var(--clay-soft);
   --color-danger: var(--danger);
@@ -47,9 +73,9 @@
   --color-amber: var(--amber);
   --color-amber-soft: var(--amber-soft);
   --font-sans: var(--font-dm-sans), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --radius-card: 0.875rem;
-  --shadow-card: 0 1px 2px rgb(46 38 32 / 0.05), 0 4px 16px rgb(46 38 32 / 0.06);
+  --font-display: var(--font-fredoka), var(--font-dm-sans), ui-sans-serif, sans-serif;
+  --radius-card: 1rem;
+  --shadow-card: 0 1px 2px oklch(0.26 0.02 70 / 0.05), 0 6px 20px oklch(0.26 0.02 70 / 0.07);
 }
 
 body {
