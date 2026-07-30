@@ -181,7 +181,78 @@ npx eslint app components lib
 scripts/db.sh test     # all DB logic suites (run against a local Postgres)
 ```
 
-The database test suites (`tests/db/*.sql`) exercise the money-critical logic —
-mixed sales, recipe deduction, weighted-average cost, partial receiving, shift
-reconciliation, refunds/voids, loyalty reversal, and report reconciliation — and
-must all pass before shipping a change that touches business logic.
+The database test suites exercise the money-critical logic: mixed sales, recipe
+deduction, weighted-average cost, partial receiving, shift reconciliation,
+refunds/voids, loyalty reversal, report reconciliation, and duplicate-payment
+idempotency. The suite also runs `tests/db/concurrency.sh`, a two-connection race
+test proving `consume_stock`'s row lock stops two terminals from overselling the
+same stock. All must pass before shipping a change that touches business logic.
+
+`scripts/db.sh test` runs against a local Postgres and validates the schema and
+functions. It does not exercise the app's own Supabase queries — the go-live
+smoke test below does that against the real database.
+
+---
+
+## 9. Go-live smoke test (first 15 minutes on the live app)
+
+Static checks confirm the schema, RLS, and every query/RPC the app makes are
+structurally correct. This walkthrough is the final proof: it drives the real
+UI against the live Supabase project and touches every money-critical path once.
+Run it immediately after deploying, before real customers.
+
+**Setup (owner):**
+
+- [ ] Sign in as the owner. The sidebar shows all sections (Operate, Manage,
+      Money, Admin). The top bar reads **Online** (green).
+- [ ] **Settings → Business profile**: set name, address, contact, receipt width.
+- [ ] Create the minimum catalog to exercise both product types:
+  - One **prepared item** (Menu) with a **recipe** of 2+ ingredients (Recipes),
+    each ingredient given opening stock (Inventory → adjustment).
+  - One **retail product** (Products) linked to an inventory item with stock.
+  - One **modifier** group with an option that adds price and swaps an ingredient.
+
+**Sell (cashier, or owner):**
+
+- [ ] **Shifts → Open** with a starting float (e.g. ₱1,000). Selling is blocked
+      until a shift is open.
+- [ ] In **POS**, build one order with **both** the prepared drink (add the
+      modifier) **and** the retail product. Subtotal and total update live.
+- [ ] Take payment as a **split** (part cash, part GCash with a reference). The
+      order will not close until payments cover the total.
+- [ ] **Print/preview the receipt**; reprint it (the reprint is audited).
+
+**Verify the sale posted correctly:**
+
+- [ ] **Kitchen / Bar**: the prepared drink appears as a ticket; the retail item
+      does **not**. Advance it New → Preparing → Ready → Served.
+- [ ] **Inventory**: the recipe ingredients dropped by their recipe amounts (with
+      the modifier's ingredient swap applied), and the retail item dropped by one.
+      Each change shows in the item's movement ledger.
+- [ ] **Reports** (Today): the sale, its payment split, and COGS appear. Numbers
+      tie to what you charged.
+
+**Purchasing → payables → accounting:**
+
+- [ ] **Suppliers**: add one. **Purchasing**: create a PO, mark sent, **receive**
+      it (full or partial). The received item's stock rises and its weighted-average
+      cost updates. A payable appears for the supplier.
+- [ ] **Expenses**: record one (e.g. utilities) and approve it. **Accounting**:
+      it reduces estimated net profit; inventory value and payables show.
+
+**Reversals and close:**
+
+- [ ] **Void or refund** the earlier sale (Orders → the order). Confirm revenue,
+      inventory, COGS, loyalty, and the shift totals all reverse.
+- [ ] **Shifts → Close** with a blind cash count. Expected vs actual reconciles;
+      a variance requires a reason. The shift report prints.
+
+**Access control (create a second, cashier account):**
+
+- [ ] Signed in as a **cashier**, the sidebar hides Accounting, Staff, Audit Logs,
+      and full profit figures. Visiting `/accounting` directly redirects away.
+      This confirms RLS and role gating hold on the live project, not just in tests.
+
+If every box checks, the install is verified end-to-end and ready for service.
+Anything that fails here points at data/config (missing catalog, env keys, or the
+Supabase redirect URL), not app logic, which the test suites already cover.
