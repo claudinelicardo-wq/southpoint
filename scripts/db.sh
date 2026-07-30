@@ -56,6 +56,16 @@ run_tests() {
       echo "FAIL $(basename "$f")"; echo "$out" | tail -20; fail=1
     fi
   done
+  # Multi-connection tests (concurrency / locking) can't run as single-session
+  # .sql files, so they ship as executable shell scripts.
+  for s in "$ROOT"/tests/db/*.sh; do
+    [ -e "$s" ] || continue
+    if out=$(PORT="$PORT" DB="$DB" PGBIN="$PGBIN" bash "$s" 2>&1); then
+      echo "$out"
+    else
+      echo "$out"; fail=1
+    fi
+  done
   exit $fail
 }
 
