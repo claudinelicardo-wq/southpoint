@@ -4,6 +4,7 @@ import { can } from "@/lib/permissions";
 import { getSession } from "@/lib/session";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
+import { InventoryImport } from "./inventory-import";
 import { InventoryManager } from "./inventory-manager";
 
 export const metadata = { title: "Inventory" };
@@ -26,17 +27,16 @@ export default async function InventoryPage() {
     items = (data as InventoryItem[] | null) ?? [];
   }
 
+  const canAdjust = can(session.permissions, session.profile.role, "inventory.adjust");
+
   return (
     <div>
       <PageHeader
         title="Inventory"
         description="Stock levels, costs, and manual adjustments. Every stock change goes through the movement ledger."
+        actions={<InventoryImport canImport={canAdjust} preview={session.preview} />}
       />
-      <InventoryManager
-        items={items}
-        canAdjust={can(session.permissions, session.profile.role, "inventory.adjust")}
-        preview={session.preview}
-      />
+      <InventoryManager items={items} canAdjust={canAdjust} preview={session.preview} />
     </div>
   );
 }
