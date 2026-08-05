@@ -8,31 +8,30 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useRef, useState } from "react";
 
-// Columns the import understands. Required: name, inventory_type, base_unit.
-const COLUMNS = [
-  "name",
-  "sku",
-  "barcode",
-  "inventory_type",
-  "category",
-  "base_unit",
-  "purchase_unit_label",
-  "purchase_to_base_factor",
-  "reorder_level",
-  "target_level",
-  "storage_location",
-  "track_expiry",
-  "opening_stock",
-  "unit_cost",
-] as const;
+// Canonical fields the retail import understands. Only "name" is required.
+type Field = "name" | "brand" | "quantity" | "cost" | "srp" | "sku" | "barcode" | "category";
+
+// Forgiving header aliases: whatever the owner named their columns, map to ours.
+const ALIASES: Record<string, Field> = {
+  product_name: "name", name: "name", item: "name", product: "name",
+  item_name: "name", description: "name",
+  brand: "brand", make: "brand",
+  quantity: "quantity", qty: "quantity", stock: "quantity", on_hand: "quantity",
+  opening_stock: "quantity", count: "quantity",
+  cost: "cost", unit_cost: "cost", cost_price: "cost", buying_price: "cost", capital: "cost",
+  srp: "srp", selling_price: "srp", price: "srp", retail_price: "srp",
+  sell_price: "srp", srp_price: "srp",
+  sku: "sku", code: "sku", item_code: "sku",
+  barcode: "barcode", upc: "barcode", ean: "barcode",
+  category: "category", cat: "category",
+};
 
 const TEMPLATE =
-  COLUMNS.join(",") +
-  "\n" +
+  "Product Name,Brand,Quantity,Cost,SRP,SKU,Barcode,Category\n" +
   [
-    "Coffee Beans (House),ING-BEANS,,ingredient,Coffee,g,1kg bag,1000,500,2000,Dry store,false,5000,0.85",
-    "Bottled Water 500ml,RTL-WATER,4800012345678,retail,Convenience,pc,case of 24,24,24,72,Chiller,false,120,12",
-    "Paper Cups 12oz,PKG-CUP12,,packaging,,pc,sleeve of 50,50,100,500,Dry store,false,600,1.5",
+    "Coke Mismo,Coca-Cola,24,12,20,RET-COKE,4800012345678,Convenience Store",
+    "Piattos,Jack n Jill,30,15,22,,,Convenience Store",
+    "Bottled Water 500ml,Nature's Spring,48,7,12,RET-WATER,,Convenience Store",
   ].join("\n") +
   "\n";
 
@@ -55,7 +54,7 @@ interface ImportResult {
   errors: RowError[];
 }
 
-/** RFC-4180-ish CSV parser: handles quoted fields, escaped quotes, CRLF. */
+/** RFC-4180-ish CSV parser: quoted fields, escaped quotes, CRLF. */
 function parseCSV(text: string): string[][] {
   const rows: string[][] = [];
   let field = "";
@@ -91,13 +90,12 @@ function parseCSV(text: string): string[][] {
 function rowsFromCSV(text: string): { rows: ImportRow[]; unknown: string[] } {
   const grid = parseCSV(text);
   if (grid.length < 2) return { rows: [], unknown: [] };
-  const headers = grid[0].map((h) => h.trim().toLowerCase().replace(/\s+/g, "_"));
-  const known = new Set<string>(COLUMNS);
-  const unknown = headers.filter((h) => h && !known.has(h));
+  const mapped = grid[0].map((h) => ALIASES[h.trim().toLowerCase().replace(/\s+/g, "_")]);
+  const unknown = grid[0].filter((_, i) => !mapped[i]).filter((h) => h.trim() !== "");
   const rows = grid.slice(1).map((cells) => {
     const obj: ImportRow = {};
-    headers.forEach((h, i) => {
-      if (known.has(h)) obj[h] = (cells[i] ?? "").trim();
+    mapped.forEach((field, i) => {
+      if (field) obj[field] = (cells[i] ?? "").trim();
     });
     return obj;
   });
@@ -109,7 +107,7 @@ function downloadTemplate() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = "southpoint-inventory-template.csv";
+  a.download = "southpoint-products-template.csv";
   document.body.appendChild(a);
   a.click();
   a.remove();
@@ -169,7 +167,7 @@ export function InventoryImport({
     setBusy(true);
     setError(null);
     const supabase = createClient();
-    const { data, error: rpcError } = await supabase.rpc("inventory_import", {
+    const { data, error: rpcError } = await supabase.rpc("retail_import", {
       p_rows: payload,
       p_commit: commit,
     });
@@ -199,8 +197,8 @@ export function InventoryImport({
           setOpen(false);
           reset();
         }}
-        title="Import inventory from CSV"
-        description="Bulk-create stock items and opening quantities. Nothing is saved until you review and confirm."
+        title="Import products from CSV"
+        description="Bulk-add store products with their stock. Nothing is saved until you review and confirm."
         className="max-w-2xl"
       >
         <div className="space-y-4">
@@ -209,8 +207,8 @@ export function InventoryImport({
           {done ? (
             <>
               <Alert tone="success" title="Import complete">
-                Created {done.created}, updated {done.updated}, and set opening stock on{" "}
-                {done.stocked}
+                Added {done.created} new product{done.created === 1 ? "" : "s"}, updated{" "}
+                {done.updated}, and stocked {done.stocked}
                 {done.error_count > 0 ? `. ${done.error_count} row(s) were skipped.` : "."}
               </Alert>
               {done.errors.length > 0 && <ErrorTable errors={done.errors} />}
@@ -231,13 +229,15 @@ export function InventoryImport({
           ) : (
             <>
               <div className="rounded-xl border border-line bg-sand/40 p-3 text-sm text-roast">
-                <p className="font-medium text-espresso">How it works</p>
+                <p className="font-medium text-espresso">Columns</p>
                 <p className="mt-1 text-latte">
-                  Required columns: <code>name</code>, <code>inventory_type</code>{" "}
-                  (ingredient / packaging / retail / prepared / supply), and{" "}
-                  <code>base_unit</code> (g, kg, l, ml, pc, serving). Items with a matching{" "}
-                  <code>sku</code> are updated in place. <code>opening_stock</code> and{" "}
-                  <code>unit_cost</code> post an opening balance to the ledger.
+                  <strong className="text-roast">Product Name</strong> (required),{" "}
+                  <strong className="text-roast">Brand</strong>,{" "}
+                  <strong className="text-roast">Quantity</strong> (stock on hand),{" "}
+                  <strong className="text-roast">Cost</strong> (what you pay),{" "}
+                  <strong className="text-roast">SRP</strong> (selling price). Optional: SKU,
+                  Barcode, Category. Each row becomes a product you can ring up in the POS at
+                  its SRP. Rows with a matching SKU are updated in place.
                 </p>
                 <button
                   type="button"
@@ -297,7 +297,7 @@ export function InventoryImport({
                       loading={busy}
                       disabled={dry.valid === 0}
                     >
-                      Import {dry.valid} item{dry.valid === 1 ? "" : "s"}
+                      Import {dry.valid} product{dry.valid === 1 ? "" : "s"}
                     </Button>
                   </div>
                 </div>
