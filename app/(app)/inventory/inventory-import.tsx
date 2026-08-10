@@ -87,6 +87,14 @@ function parseCSV(text: string): string[][] {
   return rows.filter((r) => r.some((cell) => cell.trim() !== ""));
 }
 
+const NUMERIC_FIELDS = new Set<Field>(["quantity", "cost", "srp"]);
+
+// Strip currency symbols, thousands separators, and stray spaces so values like
+// "₱1,198.00" or "PHP 95" import as plain numbers.
+function cleanNumeric(v: string): string {
+  return v.replace(/[^0-9.\-]/g, "");
+}
+
 function rowsFromCSV(text: string): { rows: ImportRow[]; unknown: string[] } {
   const grid = parseCSV(text);
   if (grid.length < 2) return { rows: [], unknown: [] };
@@ -95,7 +103,9 @@ function rowsFromCSV(text: string): { rows: ImportRow[]; unknown: string[] } {
   const rows = grid.slice(1).map((cells) => {
     const obj: ImportRow = {};
     mapped.forEach((field, i) => {
-      if (field) obj[field] = (cells[i] ?? "").trim();
+      if (!field) return;
+      const raw = (cells[i] ?? "").trim();
+      obj[field] = NUMERIC_FIELDS.has(field) ? cleanNumeric(raw) : raw;
     });
     return obj;
   });
