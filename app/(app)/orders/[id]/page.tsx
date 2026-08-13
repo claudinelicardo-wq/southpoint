@@ -13,6 +13,7 @@ import type {
   OrderType,
   PaymentStatus,
 } from "../orders-manager";
+import { OrderActions } from "./order-actions";
 
 export const metadata = { title: "Order" };
 
@@ -66,6 +67,7 @@ interface OrderDetail {
   service_charge: number;
   total: number;
   amount_paid: number;
+  refund_total: number;
   void_reason: string | null;
   created_at: string;
   completed_at: string | null;
@@ -133,7 +135,7 @@ export default async function OrderDetailPage({
     .maybeSingle<OrderDetail>();
   if (!order) notFound();
 
-  const [i, d, p] = await Promise.all([
+  const [i, d, p, m] = await Promise.all([
     supabase
       .from("order_items")
       .select("*, order_item_modifiers(*)")
@@ -149,12 +151,25 @@ export default async function OrderDetailPage({
       .select("*, payment_methods(name)")
       .eq("order_id", id)
       .order("created_at"),
+    supabase
+      .from("payment_methods")
+      .select("code, name")
+      .eq("is_active", true)
+      .order("sort_order"),
   ]);
   const items = (i.data as unknown as OrderItemRow[] | null) ?? [];
   const discounts = (d.data as OrderDiscountRow[] | null) ?? [];
   const payments = (p.data as unknown as PaymentRow[] | null) ?? [];
+  const refundMethods = (m.data as { code: string; name: string }[] | null) ?? [];
 
   const balance = Number(order.total) - Number(order.amount_paid);
+  const refundableAmount = Number(order.amount_paid) - Number(order.refund_total);
+  const canVoid =
+    order.status === "completed" &&
+    can(session.permissions, session.profile.role, "pos.void");
+  const canRefund =
+    order.status === "completed" &&
+    can(session.permissions, session.profile.role, "pos.refund");
   const context = order.tabs?.name
     ? `Tab · ${order.tabs.name}`
     : order.courtside_label
@@ -198,6 +213,9 @@ export default async function OrderDetailPage({
       : []),
     { label: "Total", value: formatPeso(order.total), bold: true },
     { label: "Amount paid", value: formatPeso(order.amount_paid) },
+    ...(Number(order.refund_total) > 0
+      ? [{ label: "Refunded", value: `−${formatPeso(order.refund_total)}` }]
+      : []),
     { label: "Balance", value: formatPeso(balance) },
   ];
 
@@ -228,6 +246,14 @@ export default async function OrderDetailPage({
             >
               View receipt
             </Link>
+            <OrderActions
+              orderId={order.id}
+              refundableAmount={refundableAmount}
+              hasRefunds={Number(order.refund_total) > 0}
+              canVoid={canVoid}
+              canRefund={canRefund}
+              methods={refundMethods}
+            />
           </>
         }
       />
