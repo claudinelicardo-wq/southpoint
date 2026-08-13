@@ -72,6 +72,16 @@ export function KDSBoard({
   const [station, setStation] = useState<"all" | "bar" | "kitchen">("all");
   const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
+  // Local copy so a click can update the board instantly instead of waiting
+  // on the DB write + a full router.refresh() round trip. Resynced whenever
+  // a refresh actually lands, using React's reset-during-render pattern
+  // (see react.dev/learn/you-might-not-need-an-effect) rather than an effect.
+  const [orders, setOrders] = useState(initialOrders);
+  const [syncedFrom, setSyncedFrom] = useState(initialOrders);
+  if (initialOrders !== syncedFrom) {
+    setSyncedFrom(initialOrders);
+    setOrders(initialOrders);
+  }
 
   // Elapsed-time ticker.
   useEffect(() => {
@@ -107,7 +117,7 @@ export function KDSBoard({
   // Tickets: one per order per station, only prepared items still in flight.
   const tickets = useMemo(() => {
     const out: { order: KDSOrder; station: "bar" | "kitchen"; items: KDSItem[] }[] = [];
-    for (const order of initialOrders) {
+    for (const order of orders) {
       for (const st of ["bar", "kitchen"] as const) {
         if (station !== "all" && station !== st) continue;
         const items = order.order_items.filter(
@@ -117,16 +127,32 @@ export function KDSBoard({
       }
     }
     return out;
-  }, [initialOrders, station]);
+  }, [orders, station]);
 
   async function setStatus(itemIds: string[], status: KDSItem["prep_status"]) {
     setError(null);
+    const idSet = new Set(itemIds);
+    const statusAt = new Date().toISOString();
+    // Optimistic: reflect the change immediately, reconcile with the server
+    // copy once router.refresh() lands (or revert it if the write fails).
+    setOrders((prev) =>
+      prev.map((order) => ({
+        ...order,
+        order_items: order.order_items.map((item) =>
+          idSet.has(item.id) ? { ...item, prep_status: status, prep_status_at: statusAt } : item,
+        ),
+      })),
+    );
     const supabase = createClient();
     const { error } = await supabase
       .from("order_items")
-      .update({ prep_status: status, prep_status_at: new Date().toISOString() })
+      .update({ prep_status: status, prep_status_at: statusAt })
       .in("id", itemIds);
-    if (error) setError(error.message);
+    if (error) {
+      setError(error.message);
+      setOrders(initialOrders);
+      return;
+    }
     router.refresh();
   }
 
