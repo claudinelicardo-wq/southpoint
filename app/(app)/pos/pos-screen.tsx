@@ -696,14 +696,17 @@ function DiscountDialog({
   onClose: () => void;
 }) {
   const [type, setType] = useState<CartDiscount["type"]>("senior");
-  const [value, setValue] = useState(10);
+  // Kept as a string while editing — Number("") coercing to 0 on every
+  // keystroke made the field snap back to "0" and block typing.
+  const [value, setValue] = useState("10");
   const [reason, setReason] = useState("");
   const [idRef, setIdRef] = useState("");
 
   function add() {
+    const numValue = Number(value) || 0;
     const d: CartDiscount = {
       type,
-      value: type === "fixed" ? value : value / 100,
+      value: type === "fixed" ? numValue : numValue / 100,
       reason,
       id_reference: idRef,
     };
@@ -753,7 +756,7 @@ function DiscountDialog({
               min="0"
               max={type === "percent" ? 100 : undefined}
               value={value}
-              onChange={(e) => setValue(Number(e.target.value))}
+              onChange={(e) => setValue(e.target.value)}
             />
           </Field>
         )}
@@ -785,7 +788,9 @@ function ShiftOpenDialog({
   onClose: () => void;
   onOpened: () => void;
 }) {
-  const [cash, setCash] = useState(0);
+  // Kept as a string while editing — Number("") coercing to 0 on every
+  // keystroke made the field snap back to "0" and block typing.
+  const [cash, setCash] = useState("0");
   const [terminal, setTerminal] = useState("Main");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -796,7 +801,7 @@ function ShiftOpenDialog({
     setError(null);
     const supabase = createClient();
     const { error } = await supabase.rpc("shift_open", {
-      p_opening_cash: cash,
+      p_opening_cash: Number(cash) || 0,
       p_terminal: terminal,
     });
     setBusy(false);
@@ -818,7 +823,7 @@ function ShiftOpenDialog({
             step="0.25"
             required
             value={cash}
-            onChange={(e) => setCash(Number(e.target.value))}
+            onChange={(e) => setCash(e.target.value)}
           />
         </Field>
         <Field label="Terminal / drawer">

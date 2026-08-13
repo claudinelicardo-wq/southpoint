@@ -32,9 +32,12 @@ interface ItemForm {
   category: string;
   base_unit: string;
   purchase_unit_label: string;
-  purchase_to_base_factor: number;
-  reorder_level: number;
-  target_level: number;
+  // Kept as strings while editing so the input can be cleared to empty —
+  // Number("") coerces to 0, which made a controlled input snap back to
+  // "0" and block typing a new value.
+  purchase_to_base_factor: string;
+  reorder_level: string;
+  target_level: string;
   storage_location: string;
   track_expiry: boolean;
 }
@@ -47,9 +50,9 @@ const EMPTY_FORM: ItemForm = {
   category: "",
   base_unit: "g",
   purchase_unit_label: "",
-  purchase_to_base_factor: 1,
-  reorder_level: 0,
-  target_level: 0,
+  purchase_to_base_factor: "1",
+  reorder_level: "0",
+  target_level: "0",
   storage_location: "",
   track_expiry: false,
 };
@@ -116,9 +119,9 @@ export function InventoryManager({
       category: item.category,
       base_unit: item.base_unit,
       purchase_unit_label: item.purchase_unit_label,
-      purchase_to_base_factor: Number(item.purchase_to_base_factor),
-      reorder_level: Number(item.reorder_level),
-      target_level: Number(item.target_level),
+      purchase_to_base_factor: String(item.purchase_to_base_factor),
+      reorder_level: String(item.reorder_level),
+      target_level: String(item.target_level),
       storage_location: item.storage_location,
       track_expiry: item.track_expiry,
     });
@@ -146,9 +149,9 @@ export function InventoryManager({
       inventory_type: form.inventory_type,
       category: form.category.trim(),
       purchase_unit_label: form.purchase_unit_label.trim(),
-      purchase_to_base_factor: form.purchase_to_base_factor,
-      reorder_level: form.reorder_level,
-      target_level: form.target_level,
+      purchase_to_base_factor: Number(form.purchase_to_base_factor) || 1,
+      reorder_level: Number(form.reorder_level) || 0,
+      target_level: Number(form.target_level) || 0,
       storage_location: form.storage_location.trim(),
       track_expiry: form.track_expiry,
     };
@@ -422,7 +425,7 @@ export function InventoryManager({
                 required
                 value={form.purchase_to_base_factor}
                 onChange={(e) =>
-                  setForm({ ...form, purchase_to_base_factor: Number(e.target.value) })
+                  setForm({ ...form, purchase_to_base_factor: e.target.value })
                 }
               />
             </Field>
@@ -441,7 +444,7 @@ export function InventoryManager({
                 min="0"
                 value={form.reorder_level}
                 onChange={(e) =>
-                  setForm({ ...form, reorder_level: Number(e.target.value) })
+                  setForm({ ...form, reorder_level: e.target.value })
                 }
               />
             </Field>
@@ -452,7 +455,7 @@ export function InventoryManager({
                 min="0"
                 value={form.target_level}
                 onChange={(e) =>
-                  setForm({ ...form, target_level: Number(e.target.value) })
+                  setForm({ ...form, target_level: e.target.value })
                 }
               />
             </Field>

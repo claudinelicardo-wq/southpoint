@@ -179,12 +179,14 @@ function GroupDialog({
     name: string;
     selection: "single" | "multi";
     is_required: boolean;
-    max_select: number;
+    // Kept as a string while editing — Number("") coercing to 0 on every
+    // keystroke made the field snap back to "0" and block typing.
+    max_select: string;
   }>({
     name: group?.name ?? "",
     selection: group?.selection ?? "single",
     is_required: group?.is_required ?? false,
-    max_select: group?.max_select ?? 1,
+    max_select: String(group?.max_select ?? 1),
   });
 
   async function save(e: React.FormEvent) {
@@ -195,7 +197,7 @@ function GroupDialog({
     const payload = {
       ...form,
       min_select: form.is_required ? 1 : 0,
-      max_select: form.selection === "single" ? 1 : Math.max(1, form.max_select),
+      max_select: form.selection === "single" ? 1 : Math.max(1, Number(form.max_select) || 1),
     };
     const { error } = group
       ? await supabase.from("modifier_groups").update(payload).eq("id", group.id)
@@ -240,7 +242,7 @@ function GroupDialog({
                 min="1"
                 max="10"
                 value={form.max_select}
-                onChange={(e) => setForm({ ...form, max_select: Number(e.target.value) })}
+                onChange={(e) => setForm({ ...form, max_select: e.target.value })}
               />
             </Field>
           )}
@@ -282,7 +284,9 @@ function OptionDialog({
   const existingEffect = option ? effects.find((e) => e.option_id === option.id) ?? null : null;
   const [form, setForm] = useState({
     name: option?.name ?? "",
-    price_delta: option?.price_delta ?? 0,
+    // Kept as a string while editing — Number("") coercing to 0 on every
+    // keystroke made the field snap back to "0" and block typing.
+    price_delta: String(option?.price_delta ?? 0),
   });
   const [effectKind, setEffectKind] = useState<"none" | "add" | "remove" | "replace">(
     existingEffect
@@ -295,9 +299,9 @@ function OptionDialog({
   );
   const [fx, setFx] = useState({
     add_item_id: existingEffect?.add_item_id ?? "",
-    add_qty: existingEffect?.add_qty ?? 0,
+    add_qty: String(existingEffect?.add_qty ?? 0),
     remove_item_id: existingEffect?.remove_item_id ?? "",
-    remove_qty: existingEffect?.remove_qty ?? 0,
+    remove_qty: String(existingEffect?.remove_qty ?? 0),
   });
 
   async function save(e: React.FormEvent) {
@@ -306,11 +310,12 @@ function OptionDialog({
     setError(null);
     const supabase = createClient();
     let optionId = option?.id;
+    const payload0 = { ...form, price_delta: Number(form.price_delta) || 0 };
 
     if (option) {
       const { error } = await supabase
         .from("modifier_options")
-        .update(form)
+        .update(payload0)
         .eq("id", option.id);
       if (error) {
         setError(error.message);
@@ -320,7 +325,7 @@ function OptionDialog({
     } else {
       const { data, error } = await supabase
         .from("modifier_options")
-        .insert({ ...form, group_id: group.id })
+        .insert({ ...payload0, group_id: group.id })
         .select("id")
         .single();
       if (error || !data) {
@@ -347,9 +352,9 @@ function OptionDialog({
       const payload = {
         option_id: optionId,
         add_item_id: effectKind !== "remove" ? fx.add_item_id || null : null,
-        add_qty: effectKind !== "remove" && fx.add_item_id ? fx.add_qty : null,
+        add_qty: effectKind !== "remove" && fx.add_item_id ? Number(fx.add_qty) || 0 : null,
         remove_item_id: effectKind !== "add" ? fx.remove_item_id || null : null,
-        remove_qty: effectKind !== "add" && fx.remove_item_id ? fx.remove_qty : null,
+        remove_qty: effectKind !== "add" && fx.remove_item_id ? Number(fx.remove_qty) || 0 : null,
       };
       const ins = await supabase.from("modifier_option_effects").insert(payload);
       if (ins.error) {
@@ -393,7 +398,7 @@ function OptionDialog({
               type="number"
               step="0.25"
               value={form.price_delta}
-              onChange={(e) => setForm({ ...form, price_delta: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, price_delta: e.target.value })}
             />
           </Field>
         </div>
@@ -430,7 +435,7 @@ function OptionDialog({
                 step="any"
                 required
                 value={fx.remove_qty}
-                onChange={(e) => setFx({ ...fx, remove_qty: Number(e.target.value) })}
+                onChange={(e) => setFx({ ...fx, remove_qty: e.target.value })}
               />
             </Field>
           </div>
@@ -454,7 +459,7 @@ function OptionDialog({
                 step="any"
                 required
                 value={fx.add_qty}
-                onChange={(e) => setFx({ ...fx, add_qty: Number(e.target.value) })}
+                onChange={(e) => setFx({ ...fx, add_qty: e.target.value })}
               />
             </Field>
           </div>

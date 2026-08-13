@@ -157,7 +157,9 @@ function CourtSessionDialog({
 }) {
   const [group, setGroup] = useState("");
   const [tabId, setTabId] = useState("");
-  const [hours, setHours] = useState(1);
+  // Kept as a string while editing — Number("") coercing to 0 on every
+  // keystroke made the field snap back to "0" and block typing.
+  const [hours, setHours] = useState("1");
   const [booking, setBooking] = useState("");
   const [notes, setNotes] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -174,7 +176,9 @@ function CourtSessionDialog({
       p_customer: null,
       p_tab: tabId || null,
       p_expected_end:
-        hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null,
+        Number(hours) > 0
+          ? new Date(Date.now() + Number(hours) * 3600_000).toISOString()
+          : null,
       p_booking_reference: booking || null,
       p_notes: notes || null,
     });
@@ -204,7 +208,7 @@ function CourtSessionDialog({
               min="0"
               step="0.5"
               value={hours}
-              onChange={(e) => setHours(Number(e.target.value))}
+              onChange={(e) => setHours(e.target.value)}
             />
           </Field>
           <Field label="Link a cafe tab (optional)">

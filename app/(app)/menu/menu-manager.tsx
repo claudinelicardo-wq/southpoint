@@ -217,9 +217,12 @@ function ProductDialog({
   const [form, setForm] = useState({
     name: product?.name ?? "",
     category_id: product?.category_id ?? categories[0]?.id ?? "",
-    price: product?.price ?? 0,
+    // Kept as strings while editing so the input can be cleared to empty —
+    // Number("") coerces to 0, which made a controlled input snap back to
+    // "0" and block typing a new value.
+    price: product ? String(product.price) : "",
     station: (product?.station ?? "bar") as PrepStation,
-    prep_minutes: product?.prep_minutes ?? 5,
+    prep_minutes: product ? String(product.prep_minutes) : "5",
     tax_exempt: product?.tax_exempt ?? false,
   });
   const [variantText, setVariantText] = useState(
@@ -240,9 +243,14 @@ function ProductDialog({
     setError(null);
     const supabase = createClient();
     let productId = product?.id;
+    const payload = {
+      ...form,
+      price: Number(form.price) || 0,
+      prep_minutes: Number(form.prep_minutes) || 0,
+    };
 
     if (product) {
-      const { error } = await supabase.from("products").update(form).eq("id", product.id);
+      const { error } = await supabase.from("products").update(payload).eq("id", product.id);
       if (error) {
         setError(error.message);
         setLoading(false);
@@ -251,7 +259,7 @@ function ProductDialog({
     } else {
       const { data, error } = await supabase
         .from("products")
-        .insert({ ...form, kind: "prepared" })
+        .insert({ ...payload, kind: "prepared" })
         .select("id")
         .single();
       if (error || !data) {
@@ -372,7 +380,7 @@ function ProductDialog({
               step="0.25"
               required
               value={form.price}
-              onChange={(e) => setForm({ ...form, price: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, price: e.target.value })}
             />
           </Field>
           <Field label="Preparation station">
@@ -390,7 +398,7 @@ function ProductDialog({
               type="number"
               min="0"
               value={form.prep_minutes}
-              onChange={(e) => setForm({ ...form, prep_minutes: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, prep_minutes: e.target.value })}
             />
           </Field>
         </div>

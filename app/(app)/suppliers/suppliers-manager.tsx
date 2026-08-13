@@ -36,7 +36,9 @@ interface SupplierForm {
   phone: string;
   email: string;
   address: string;
-  payment_terms_days: number;
+  // Kept as a string while editing — Number("") coercing to 0 on every
+  // keystroke made the field snap back to "0" and block typing.
+  payment_terms_days: string;
   notes: string;
 }
 
@@ -46,7 +48,7 @@ const EMPTY_FORM: SupplierForm = {
   phone: "",
   email: "",
   address: "",
-  payment_terms_days: 0,
+  payment_terms_days: "0",
   notes: "",
 };
 
@@ -84,7 +86,7 @@ export function SuppliersManager({
       phone: s.phone,
       email: s.email,
       address: s.address,
-      payment_terms_days: Number(s.payment_terms_days),
+      payment_terms_days: String(s.payment_terms_days),
       notes: s.notes ?? "",
     });
     setError(null);
@@ -103,7 +105,7 @@ export function SuppliersManager({
       phone: form.phone.trim(),
       email: form.email.trim(),
       address: form.address.trim(),
-      payment_terms_days: form.payment_terms_days,
+      payment_terms_days: Number(form.payment_terms_days) || 0,
       notes: form.notes.trim() || null,
     };
 
@@ -253,9 +255,7 @@ export function SuppliersManager({
                 step="1"
                 required
                 value={form.payment_terms_days}
-                onChange={(e) =>
-                  setForm({ ...form, payment_terms_days: Number(e.target.value) })
-                }
+                onChange={(e) => setForm({ ...form, payment_terms_days: e.target.value })}
               />
             </Field>
           </div>

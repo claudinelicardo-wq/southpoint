@@ -257,9 +257,11 @@ function TaxForm({
   const [form, setForm] = useState({
     vat_registered: Boolean(value.vat_registered ?? false),
     pricing_mode: String(value.pricing_mode ?? "tax_inclusive"),
-    vat_rate: Number(value.vat_rate ?? 0.12),
-    service_charge_rate: Number(value.service_charge_rate ?? 0),
-    sc_pwd_discount_rate: Number(value.sc_pwd_discount_rate ?? 0.2),
+    // Kept as strings while editing — Number("") coercing to 0 on every
+    // keystroke made the field snap back to "0" and block typing.
+    vat_rate: String(value.vat_rate ?? 0.12),
+    service_charge_rate: String(value.service_charge_rate ?? 0),
+    sc_pwd_discount_rate: String(value.sc_pwd_discount_rate ?? 0.2),
     sc_pwd_vat_exempt: Boolean(value.sc_pwd_vat_exempt ?? true),
   });
 
@@ -273,7 +275,12 @@ function TaxForm({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          save("tax", form);
+          save("tax", {
+            ...form,
+            vat_rate: Number(form.vat_rate) || 0,
+            service_charge_rate: Number(form.service_charge_rate) || 0,
+            sc_pwd_discount_rate: Number(form.sc_pwd_discount_rate) || 0,
+          });
         }}
       >
         {message && <Alert tone="danger">{message}</Alert>}
@@ -302,7 +309,7 @@ function TaxForm({
               max="1"
               value={form.vat_rate}
               disabled={disabled || !form.vat_registered}
-              onChange={(e) => setForm({ ...form, vat_rate: Number(e.target.value) })}
+              onChange={(e) => setForm({ ...form, vat_rate: e.target.value })}
             />
           </Field>
           <Field label="Service charge rate" hint="0 disables service charge">
@@ -313,9 +320,7 @@ function TaxForm({
               max="1"
               value={form.service_charge_rate}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, service_charge_rate: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, service_charge_rate: e.target.value })}
             />
           </Field>
           <Field label="SC / PWD discount rate" hint="0.20 = 20%">
@@ -326,9 +331,7 @@ function TaxForm({
               max="1"
               value={form.sc_pwd_discount_rate}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, sc_pwd_discount_rate: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, sc_pwd_discount_rate: e.target.value })}
             />
           </Field>
         </div>
@@ -363,7 +366,9 @@ function InventoryPolicyForm({
   const [form, setForm] = useState({
     allow_negative_stock: Boolean(value.allow_negative_stock ?? false),
     low_stock_behavior: String(value.low_stock_behavior ?? "warn"),
-    expiring_soon_days: Number(value.expiring_soon_days ?? 7),
+    // Kept as a string while editing — Number("") coercing to 0 on every
+    // keystroke made the field snap back to "0" and block typing.
+    expiring_soon_days: String(value.expiring_soon_days ?? 7),
   });
 
   return (
@@ -376,7 +381,10 @@ function InventoryPolicyForm({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          save("inventory_policy", form);
+          save("inventory_policy", {
+            ...form,
+            expiring_soon_days: Number(form.expiring_soon_days) || 0,
+          });
         }}
       >
         {message && <Alert tone="danger">{message}</Alert>}
@@ -406,9 +414,7 @@ function InventoryPolicyForm({
               max="90"
               value={form.expiring_soon_days}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, expiring_soon_days: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, expiring_soon_days: e.target.value })}
             />
           </Field>
         </div>
@@ -484,12 +490,14 @@ function LoyaltyForm({
   const { save, state, saving, message } = useSave();
   const [form, setForm] = useState({
     enabled: Boolean(value.enabled ?? true),
-    points_per_peso: Number(value.points_per_peso ?? 0.02),
-    min_purchase: Number(value.min_purchase ?? 100),
-    redemption_value_per_point: Number(value.redemption_value_per_point ?? 1),
-    max_redemption_pct: Number(value.max_redemption_pct ?? 0.5),
-    points_expiry_days: Number(value.points_expiry_days ?? 365),
-    birthday_bonus_points: Number(value.birthday_bonus_points ?? 50),
+    // Kept as strings while editing — Number("") coercing to 0 on every
+    // keystroke made the field snap back to "0" and block typing.
+    points_per_peso: String(value.points_per_peso ?? 0.02),
+    min_purchase: String(value.min_purchase ?? 100),
+    redemption_value_per_point: String(value.redemption_value_per_point ?? 1),
+    max_redemption_pct: String(value.max_redemption_pct ?? 0.5),
+    points_expiry_days: String(value.points_expiry_days ?? 365),
+    birthday_bonus_points: String(value.birthday_bonus_points ?? 50),
   });
 
   return (
@@ -502,7 +510,15 @@ function LoyaltyForm({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
-          save("loyalty", form);
+          save("loyalty", {
+            ...form,
+            points_per_peso: Number(form.points_per_peso) || 0,
+            min_purchase: Number(form.min_purchase) || 0,
+            redemption_value_per_point: Number(form.redemption_value_per_point) || 0,
+            max_redemption_pct: Number(form.max_redemption_pct) || 0,
+            points_expiry_days: Number(form.points_expiry_days) || 0,
+            birthday_bonus_points: Number(form.birthday_bonus_points) || 0,
+          });
         }}
       >
         {message && <Alert tone="danger">{message}</Alert>}
@@ -520,9 +536,7 @@ function LoyaltyForm({
               min="0"
               value={form.points_per_peso}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, points_per_peso: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, points_per_peso: e.target.value })}
             />
           </Field>
           <Field label="Minimum purchase to earn (₱)">
@@ -531,9 +545,7 @@ function LoyaltyForm({
               min="0"
               value={form.min_purchase}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, min_purchase: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, min_purchase: e.target.value })}
             />
           </Field>
           <Field label="Peso value per point">
@@ -544,10 +556,7 @@ function LoyaltyForm({
               value={form.redemption_value_per_point}
               disabled={disabled}
               onChange={(e) =>
-                setForm({
-                  ...form,
-                  redemption_value_per_point: Number(e.target.value),
-                })
+                setForm({ ...form, redemption_value_per_point: e.target.value })
               }
             />
           </Field>
@@ -559,9 +568,7 @@ function LoyaltyForm({
               max="1"
               value={form.max_redemption_pct}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, max_redemption_pct: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, max_redemption_pct: e.target.value })}
             />
           </Field>
           <Field label="Points expire after (days)" hint="0 = never">
@@ -570,9 +577,7 @@ function LoyaltyForm({
               min="0"
               value={form.points_expiry_days}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, points_expiry_days: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, points_expiry_days: e.target.value })}
             />
           </Field>
           <Field label="Birthday bonus points">
@@ -581,9 +586,7 @@ function LoyaltyForm({
               min="0"
               value={form.birthday_bonus_points}
               disabled={disabled}
-              onChange={(e) =>
-                setForm({ ...form, birthday_bonus_points: Number(e.target.value) })
-              }
+              onChange={(e) => setForm({ ...form, birthday_bonus_points: e.target.value })}
             />
           </Field>
         </div>

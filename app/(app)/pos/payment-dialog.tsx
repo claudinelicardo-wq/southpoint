@@ -12,7 +12,9 @@ import { round2 } from "./pos-types";
 
 interface PayRow {
   method: string;
-  amount: number;
+  // Kept as text for input UX (Number("") coercing to 0 on every keystroke
+  // made the field snap back to "0" and block typing a new value).
+  amount: string;
   reference_no: string;
   tendered: string; // keep as text for input UX; cash only
 }
@@ -34,7 +36,7 @@ export function PaymentDialog({
   onClose: () => void;
 }) {
   const [rows, setRows] = useState<PayRow[]>([
-    { method: "cash", amount: total, reference_no: "", tendered: "" },
+    { method: "cash", amount: String(total), reference_no: "", tendered: "" },
   ]);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +60,7 @@ export function PaymentDialog({
         setError(`${m.name} needs a reference number.`);
         return;
       }
-      if (m.kind === "cash" && r.tendered !== "" && Number(r.tendered) < r.amount) {
+      if (m.kind === "cash" && r.tendered !== "" && Number(r.tendered) < Number(r.amount)) {
         setError("Tendered cash is less than the amount due.");
         return;
       }
@@ -73,7 +75,7 @@ export function PaymentDialog({
     }
     const ok = await onSubmit(
       rows
-        .filter((r) => r.amount > 0)
+        .filter((r) => Number(r.amount) > 0)
         .map((r) => ({
           method: r.method,
           amount: round2(Number(r.amount)),
@@ -92,7 +94,7 @@ export function PaymentDialog({
           const m = methodOf(row.method);
           const change =
             m?.kind === "cash" && row.tendered !== ""
-              ? round2(Number(row.tendered) - Number(row.amount || 0))
+              ? round2(Number(row.tendered) - (Number(row.amount) || 0))
               : null;
           return (
             <div key={i} className="rounded-xl border border-line p-3">
@@ -119,7 +121,7 @@ export function PaymentDialog({
                     min="0"
                     step="0.25"
                     value={row.amount}
-                    onChange={(e) => setRow(i, { amount: Number(e.target.value) })}
+                    onChange={(e) => setRow(i, { amount: e.target.value })}
                   />
                 </Field>
                 {m?.kind === "cash" ? (
@@ -164,7 +166,12 @@ export function PaymentDialog({
             onClick={() =>
               setRows((rs) => [
                 ...rs,
-                { method: "cash", amount: Math.max(0, remaining), reference_no: "", tendered: "" },
+                {
+                  method: "cash",
+                  amount: String(Math.max(0, remaining)),
+                  reference_no: "",
+                  tendered: "",
+                },
               ])
             }
           >
