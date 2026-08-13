@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import type { Profile } from "@/lib/types";
@@ -27,7 +28,11 @@ const PREVIEW_PROFILE: Profile = {
  * When Supabase is not configured (fresh checkout, no project yet) it returns a
  * clearly-labeled preview session so the UI can be exercised without a backend.
  */
-export async function getSession(): Promise<Session | null> {
+// React's per-request cache: the layout and every page call getSession()
+// independently, so without this each navigation paid for auth.getUser() +
+// profiles + role_permissions lookups twice, fully sequentially, before the
+// page's own data even started loading.
+export const getSession = cache(async (): Promise<Session | null> => {
   if (!isSupabaseConfigured) {
     return { profile: PREVIEW_PROFILE, permissions: new Set(), preview: true };
   }
@@ -55,4 +60,4 @@ export async function getSession(): Promise<Session | null> {
   }
 
   return { profile, permissions, preview: false };
-}
+});

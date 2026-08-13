@@ -89,6 +89,7 @@ function MenuItems({
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState<Product | "new" | null>(null);
+  const [addingCategory, setAddingCategory] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   async function toggleAvailability(p: Product) {
@@ -109,9 +110,14 @@ function MenuItems({
           title="No menu items yet"
           description="Add your first prepared item: drinks, meals, snacks. Retail goods live under Products."
           action={
-            <Button onClick={() => setEditing("new")} disabled={preview}>
-              Add menu item
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => setAddingCategory(true)} disabled={preview}>
+                New category
+              </Button>
+              <Button onClick={() => setEditing("new")} disabled={preview}>
+                Add menu item
+              </Button>
+            </div>
           }
         />
         {editing !== null && (
@@ -124,6 +130,7 @@ function MenuItems({
             onClose={() => setEditing(null)}
           />
         )}
+        {addingCategory && <CategoryDialog onClose={() => setAddingCategory(false)} />}
       </div>
     );
   }
@@ -131,7 +138,10 @@ function MenuItems({
   return (
     <div className="space-y-6">
       {error && <Alert tone="danger">{error}</Alert>}
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        <Button variant="outline" onClick={() => setAddingCategory(true)} disabled={preview}>
+          New category
+        </Button>
         <Button onClick={() => setEditing("new")} disabled={preview}>
           Add menu item
         </Button>
@@ -192,7 +202,65 @@ function MenuItems({
           onClose={() => setEditing(null)}
         />
       )}
+      {addingCategory && <CategoryDialog onClose={() => setAddingCategory(false)} />}
     </div>
+  );
+}
+
+function CategoryDialog({ onClose }: { onClose: () => void }) {
+  const router = useRouter();
+  const [name, setName] = useState("");
+  const [station, setStation] = useState<PrepStation>("kitchen");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("categories")
+      .insert({ name: name.trim(), default_station: station });
+    setLoading(false);
+    if (error) {
+      setError(error.message);
+      return;
+    }
+    onClose();
+    router.refresh();
+  }
+
+  return (
+    <Dialog open onClose={onClose} title="New category">
+      <form onSubmit={save} className="space-y-4">
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Field label="Name">
+          <Input
+            required
+            autoFocus
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Pastries"
+          />
+        </Field>
+        <Field label="Default preparation station" hint="Applied to new items in this category; each item can still override it.">
+          <Select value={station} onChange={(e) => setStation(e.target.value as PrepStation)}>
+            <option value="bar">Bar</option>
+            <option value="kitchen">Kitchen</option>
+            <option value="none">No preparation</option>
+          </Select>
+        </Field>
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="ghost" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" loading={loading}>
+            Create category
+          </Button>
+        </div>
+      </form>
+    </Dialog>
   );
 }
 
