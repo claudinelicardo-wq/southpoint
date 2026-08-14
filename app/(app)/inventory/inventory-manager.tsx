@@ -40,6 +40,10 @@ interface ItemForm {
   target_level: string;
   storage_location: string;
   track_expiry: boolean;
+  // New items only — without this, a newly created item starts at 0 stock
+  // with no way to record what's actually on hand.
+  opening_stock: string;
+  opening_cost: string;
 }
 
 const EMPTY_FORM: ItemForm = {
@@ -55,6 +59,8 @@ const EMPTY_FORM: ItemForm = {
   target_level: "0",
   storage_location: "",
   track_expiry: false,
+  opening_stock: "",
+  opening_cost: "",
 };
 
 export function InventoryManager({
@@ -124,6 +130,8 @@ export function InventoryManager({
       target_level: String(item.target_level),
       storage_location: item.storage_location,
       track_expiry: item.track_expiry,
+      opening_stock: "",
+      opening_cost: "",
     });
     setFormError(null);
     setFormOpen(true);
@@ -156,17 +164,49 @@ export function InventoryManager({
       track_expiry: form.track_expiry,
     };
 
-    const { error } = editing
-      ? await supabase.from("inventory_items").update(payload).eq("id", editing.id)
-      : await supabase
-          .from("inventory_items")
-          .insert({ ...payload, base_unit: form.base_unit });
-
-    setSaving(false);
-    if (error) {
-      setFormError(error.message);
+    if (editing) {
+      const { error } = await supabase
+        .from("inventory_items")
+        .update(payload)
+        .eq("id", editing.id);
+      setSaving(false);
+      if (error) {
+        setFormError(error.message);
+        return;
+      }
+      setFormOpen(false);
+      router.refresh();
       return;
     }
+
+    const { data, error } = await supabase
+      .from("inventory_items")
+      .insert({ ...payload, base_unit: form.base_unit })
+      .select("id")
+      .single();
+    if (error || !data) {
+      setSaving(false);
+      setFormError(error?.message ?? "Could not create the item.");
+      return;
+    }
+
+    const openingStock = Number(form.opening_stock) || 0;
+    if (openingStock > 0) {
+      const { error: stockError } = await supabase.rpc("inventory_adjust", {
+        p_item: data.id,
+        p_qty_delta: openingStock,
+        p_reason: "New item — opening stock",
+        p_unit_cost: form.opening_cost !== "" ? Number(form.opening_cost) : null,
+        p_movement_type: "opening_balance",
+      });
+      if (stockError) {
+        setSaving(false);
+        setFormError(`Item created, but stock could not be added: ${stockError.message}`);
+        return;
+      }
+    }
+
+    setSaving(false);
     setFormOpen(false);
     router.refresh();
   }
@@ -460,6 +500,34 @@ export function InventoryManager({
               />
             </Field>
           </div>
+          {!editing && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field
+                label="Opening stock"
+                hint="How many you have on hand right now, in the base unit."
+              >
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.opening_stock}
+                  onChange={(e) => setForm({ ...form, opening_stock: e.target.value })}
+                />
+              </Field>
+              <Field
+                label={`Unit cost (₱ per ${form.base_unit})`}
+                hint="Leave blank to skip costing this batch."
+              >
+                <Input
+                  type="number"
+                  min="0"
+                  step="any"
+                  value={form.opening_cost}
+                  onChange={(e) => setForm({ ...form, opening_cost: e.target.value })}
+                />
+              </Field>
+            </div>
+          )}
           <Switch
             checked={form.track_expiry}
             onChange={(v) => setForm({ ...form, track_expiry: v })}
