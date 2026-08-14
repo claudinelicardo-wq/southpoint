@@ -33,6 +33,12 @@ export function formatTime(iso: string): string {
   }).format(new Date(iso));
 }
 
+/** Asia/Manila calendar date for a timestamp, as YYYY-MM-DD — used to group
+ * orders by business day regardless of the server/browser's own timezone. */
+export function manilaDateKey(iso: string): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: TZ }).format(new Date(iso));
+}
+
 /** Quantity: trim trailing zeros of numeric(14,4) strings. */
 export function formatQty(q: number | string): string {
   const n = typeof q === "string" ? Number(q) : q;

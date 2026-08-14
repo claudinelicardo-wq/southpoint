@@ -8,7 +8,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select, Switch } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
-import { formatDateTime, formatPeso, formatTime } from "@/lib/format";
+import { formatDateTime, formatPeso, formatTime, manilaDateKey } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -795,6 +795,15 @@ function TabOrdersDialog({
   const total = sorted.reduce((s, o) => s + Number(o.total), 0);
   const paid = sorted.reduce((s, o) => s + Number(o.amount_paid), 0);
 
+  // Grouped by Manila calendar day — everything ordered on a given day
+  // settles as one combined receipt, rather than one per order.
+  const byDay = new Map<string, OrderListRow[]>();
+  for (const o of sorted) {
+    const key = manilaDateKey(o.created_at);
+    (byDay.get(key) ?? byDay.set(key, []).get(key)!).push(o);
+  }
+  const days = [...byDay.entries()].sort((a, b) => b[0].localeCompare(a[0]));
+
   return (
     <Dialog
       open
@@ -803,54 +812,71 @@ function TabOrdersDialog({
       description={`${sorted.length} order${sorted.length === 1 ? "" : "s"} · ${formatPeso(total)} total · ${formatPeso(total - paid)} balance`}
       className="max-w-2xl"
     >
-      <div className="space-y-3">
+      <div className="space-y-5">
         {sorted.length === 0 ? (
           <EmptyState title="No orders yet" description="Nothing has been rung up on this tab." />
         ) : (
-          <Table>
-            <THead>
-              <TH>Order</TH>
-              <TH>Time</TH>
-              <TH className="text-right">Total</TH>
-              <TH>Status</TH>
-              <TH>Payment</TH>
-              <TH className="text-right">Receipt</TH>
-            </THead>
-            <TBody>
-              {sorted.map((o) => (
-                <TR key={o.id}>
-                  <TD className="font-medium">
-                    <Link
-                      href={`/orders/${o.id}`}
-                      className="text-espresso underline-offset-2 hover:underline"
-                    >
-                      {o.order_number}
-                    </Link>
-                  </TD>
-                  <TD className="text-latte">{formatTime(o.created_at)}</TD>
-                  <TD className="text-right text-espresso">{formatPeso(o.total)}</TD>
-                  <TD>
-                    <Badge tone={STATUS_BADGES[o.status].tone}>
-                      {STATUS_BADGES[o.status].label}
-                    </Badge>
-                  </TD>
-                  <TD>
-                    <Badge tone={PAYMENT_BADGES[o.payment_status].tone}>
-                      {PAYMENT_BADGES[o.payment_status].label}
-                    </Badge>
-                  </TD>
-                  <TD className="text-right">
-                    <Link
-                      href={`/receipt/${o.id}`}
-                      className="text-court underline-offset-2 hover:underline"
-                    >
-                      View
-                    </Link>
-                  </TD>
-                </TR>
-              ))}
-            </TBody>
-          </Table>
+          days.map(([day, dayOrders]) => {
+            const dayTotal = dayOrders.reduce((s, o) => s + Number(o.total), 0);
+            return (
+              <div key={day}>
+                <div className="mb-1.5 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-espresso">
+                    {new Intl.DateTimeFormat("en-PH", {
+                      timeZone: "Asia/Manila",
+                      dateStyle: "medium",
+                    }).format(new Date(`${day}T12:00:00`))}
+                    <span className="ml-2 font-normal text-latte">
+                      {dayOrders.length} order{dayOrders.length === 1 ? "" : "s"} ·{" "}
+                      {formatPeso(dayTotal)}
+                    </span>
+                  </p>
+                  <Link
+                    href={`/receipt/tab/${tab.id}/${day}`}
+                    target="_blank"
+                    className="text-sm font-medium text-court underline-offset-2 hover:underline"
+                  >
+                    Day receipt
+                  </Link>
+                </div>
+                <Table>
+                  <THead>
+                    <TH>Order</TH>
+                    <TH>Time</TH>
+                    <TH className="text-right">Total</TH>
+                    <TH>Status</TH>
+                    <TH>Payment</TH>
+                  </THead>
+                  <TBody>
+                    {dayOrders.map((o) => (
+                      <TR key={o.id}>
+                        <TD className="font-medium">
+                          <Link
+                            href={`/orders/${o.id}`}
+                            className="text-espresso underline-offset-2 hover:underline"
+                          >
+                            {o.order_number}
+                          </Link>
+                        </TD>
+                        <TD className="text-latte">{formatTime(o.created_at)}</TD>
+                        <TD className="text-right text-espresso">{formatPeso(o.total)}</TD>
+                        <TD>
+                          <Badge tone={STATUS_BADGES[o.status].tone}>
+                            {STATUS_BADGES[o.status].label}
+                          </Badge>
+                        </TD>
+                        <TD>
+                          <Badge tone={PAYMENT_BADGES[o.payment_status].tone}>
+                            {PAYMENT_BADGES[o.payment_status].label}
+                          </Badge>
+                        </TD>
+                      </TR>
+                    ))}
+                  </TBody>
+                </Table>
+              </div>
+            );
+          })
         )}
         <div className="flex justify-end pt-1">
           <Button variant="ghost" onClick={onClose}>

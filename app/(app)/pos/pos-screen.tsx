@@ -18,7 +18,7 @@ import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ItemDialog } from "./item-dialog";
 import { PaymentDialog } from "./payment-dialog";
 import {
@@ -86,6 +86,7 @@ export function POSScreen({
   preview: boolean;
 }) {
   const router = useRouter();
+  const orderPanelRef = useRef<HTMLDivElement>(null);
   const [cart, setCart] = useState<CartState>(EMPTY_CART);
   const [hydrated, setHydrated] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("all");
@@ -354,7 +355,10 @@ export function POSScreen({
       </div>
 
       {/* ------------------------------------------------ order panel */}
-      <div className="flex w-full flex-col rounded-(--radius-card) border border-line bg-paper shadow-(--shadow-card) lg:w-80 lg:shrink-0 xl:w-96">
+      <div
+        ref={orderPanelRef}
+        className="flex w-full scroll-mt-4 flex-col rounded-(--radius-card) border border-line bg-paper shadow-(--shadow-card) lg:w-80 lg:shrink-0 xl:w-96"
+      >
         <div className="border-b border-line p-3">
           <div className="grid grid-cols-4 gap-1">
             {(Object.keys(ORDER_TYPE_LABELS) as OrderType[]).map((t) => (
@@ -534,6 +538,23 @@ export function POSScreen({
           </Button>
         </div>
       </div>
+
+      {/* Mobile-only: the order panel is stacked below the product grid,
+          so without this a tapped item adds silently off-screen. Tapping
+          it scrolls the order panel into view. */}
+      {cart.items.length > 0 && (
+        <button
+          type="button"
+          onClick={() => orderPanelRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+          className="fixed inset-x-3 bottom-3 z-40 flex items-center justify-between rounded-2xl bg-court px-5 py-3.5 text-white shadow-lg lg:hidden"
+        >
+          <span className="text-sm font-medium">
+            View order · {cart.items.reduce((n, i) => n + i.qty, 0)} item
+            {cart.items.reduce((n, i) => n + i.qty, 0) === 1 ? "" : "s"}
+          </span>
+          <span className="text-sm font-bold">{formatPeso(totals.total)}</span>
+        </button>
+      )}
 
       {/* ------------------------------------------------ dialogs */}
       {itemDialog && (
