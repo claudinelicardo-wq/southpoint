@@ -7,6 +7,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Select, Switch, Textarea } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
+import { cn } from "@/lib/cn";
 import type { InventoryItem, InventoryType } from "@/lib/catalog-types";
 import { INVENTORY_TYPE_LABELS, stockStatus } from "@/lib/catalog-types";
 import { formatPeso, formatQty } from "@/lib/format";
@@ -335,9 +336,7 @@ export function InventoryManager({
                     </Badge>
                   </TD>
                   <TD>
-                    <span className="mr-2 text-espresso">
-                      {formatQty(item.current_stock)} {item.base_unit}
-                    </span>
+                    <StockCell item={item} editable={canAdjust && !preview} />
                     <Badge tone={badge.tone}>{badge.label}</Badge>
                   </TD>
                   <TD className="text-latte">
@@ -617,5 +616,94 @@ export function InventoryManager({
         </form>
       </Dialog>
     </div>
+  );
+}
+
+/**
+ * Click-to-edit stock quantity. Still goes through inventory_adjust (the
+ * same ledger-backed RPC the Adjust dialog uses) so it stays correct
+ * everywhere else that reads stock — POS availability, reports, low-stock
+ * alerts — instead of writing current_stock directly and breaking the
+ * movement ledger it is derived from.
+ */
+function StockCell({ item, editable }: { item: InventoryItem; editable: boolean }) {
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(String(item.current_stock));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  function startEdit() {
+    if (!editable) return;
+    setValue(String(item.current_stock));
+    setError(null);
+    setEditing(true);
+  }
+
+  async function commit() {
+    const next = Number(value);
+    if (!Number.isFinite(next) || next < 0) {
+      setError("Enter a valid quantity ≥ 0.");
+      return;
+    }
+    const delta = Math.round((next - Number(item.current_stock)) * 1e6) / 1e6;
+    if (delta === 0) {
+      setEditing(false);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("inventory_adjust", {
+      p_item: item.id,
+      p_qty_delta: delta,
+      p_reason: "Inline stock edit",
+    });
+    setSaving(false);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    setEditing(false);
+    router.refresh();
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={startEdit}
+        disabled={!editable}
+        className={cn(
+          "mr-2 rounded px-1 -mx-1 text-espresso",
+          editable && "hover:bg-sand cursor-text",
+        )}
+        title={editable ? "Click to edit stock" : undefined}
+      >
+        {formatQty(item.current_stock)} {item.base_unit}
+      </button>
+    );
+  }
+
+  return (
+    <span className="mr-2 inline-flex items-center gap-1.5">
+      <input
+        type="number"
+        autoFocus
+        step="any"
+        min="0"
+        value={value}
+        disabled={saving}
+        onChange={(e) => setValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") commit();
+          if (e.key === "Escape") setEditing(false);
+        }}
+        onBlur={commit}
+        className="w-20 rounded-lg border border-court bg-paper px-1.5 py-0.5 text-sm text-espresso outline-none"
+      />
+      <span className="text-xs text-latte">{item.base_unit}</span>
+      {error && <span className="text-xs text-danger">{error}</span>}
+    </span>
   );
 }
