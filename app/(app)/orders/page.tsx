@@ -29,11 +29,12 @@ export default async function OrdersPage() {
   let tabOrders: TabOrderRow[] = [];
   let orders: OrderListRow[] = [];
   let methods: PaymentMethod[] = [];
+  let gcashQrImage: string | null = null;
 
   if (!session.preview) {
     const supabase = await createClient();
     const cutoff = closedTabCutoff();
-    const [t, to, o, m] = await Promise.all([
+    const [t, to, o, m, receipt] = await Promise.all([
       // Open tabs plus tabs closed in the last 48h (for the reopen list).
       supabase
         .from("tabs")
@@ -49,7 +50,7 @@ export default async function OrdersPage() {
       supabase
         .from("orders")
         .select(
-          "id, order_number, order_type, status, payment_status, total, created_at, courtside_label, customers(full_name), tabs(name)",
+          "id, order_number, order_type, status, payment_status, total, amount_paid, created_at, tab_id, courtside_label, customers(full_name), tabs(name)",
         )
         .order("created_at", { ascending: false })
         .limit(100),
@@ -58,11 +59,14 @@ export default async function OrdersPage() {
         .select("id, code, name, kind, requires_reference, is_active, sort_order")
         .eq("is_active", true)
         .order("sort_order"),
+      supabase.from("settings").select("value").eq("key", "receipt").single(),
     ]);
     tabs = (t.data as TabRow[] | null) ?? [];
     tabOrders = (to.data as TabOrderRow[] | null) ?? [];
     orders = (o.data as unknown as OrderListRow[] | null) ?? [];
     methods = (m.data as PaymentMethod[] | null) ?? [];
+    gcashQrImage = (receipt.data?.value as { gcash_qr_image?: string } | null)
+      ?.gcash_qr_image ?? null;
   }
 
   return (
@@ -76,6 +80,7 @@ export default async function OrdersPage() {
         tabOrders={tabOrders}
         orders={orders}
         methods={methods}
+        gcashQrImage={gcashQrImage}
         canSettle={can(session.permissions, session.profile.role, "tabs.manage")}
         canReopen={can(session.permissions, session.profile.role, "tabs.reopen")}
         preview={session.preview}

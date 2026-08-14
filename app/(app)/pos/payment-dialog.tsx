@@ -23,12 +23,14 @@ interface PayRow {
 export function PaymentDialog({
   total,
   methods,
+  gcashQrImage,
   busy,
   onSubmit,
   onClose,
 }: {
   total: number;
   methods: PaymentMethod[];
+  gcashQrImage?: string | null;
   busy: boolean;
   onSubmit: (
     payments: { method: string; amount: number; reference_no?: string; tendered?: number }[],
@@ -147,6 +149,26 @@ export function PaymentDialog({
                   <div />
                 )}
               </div>
+              {row.method === "gcash" && (
+                <div className="mt-3 flex items-center gap-3 rounded-lg bg-cream p-3">
+                  {gcashQrImage ? (
+                    <>
+                      <img
+                        src={gcashQrImage}
+                        alt="GCash QR code"
+                        className="h-28 w-28 shrink-0 rounded-lg border border-line bg-white object-contain"
+                      />
+                      <p className="text-sm text-roast">
+                        Show this to the customer to scan in their GCash app.
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-sm text-latte">
+                      No GCash QR code on file — add one in Settings → Receipt.
+                    </p>
+                  )}
+                </div>
+              )}
               {rows.length > 1 && (
                 <button
                   className="mt-2 text-xs text-danger underline"

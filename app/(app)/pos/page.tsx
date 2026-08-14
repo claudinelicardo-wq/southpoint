@@ -33,10 +33,11 @@ export default async function POSPage() {
   let customers: CustomerLite[] = [];
   let shiftId: string | null = null;
   let taxConfig: Record<string, unknown> = {};
+  let gcashQrImage: string | null = null;
 
   if (!session.preview) {
     const supabase = await createClient();
-    const [c, p, v, g, o, pg, inv, pm, tabs, cust, shift, tax] = await Promise.all([
+    const [c, p, v, g, o, pg, inv, pm, tabs, cust, shift, tax, receipt] = await Promise.all([
       supabase.from("categories").select("*").is("archived_at", null).order("sort_order"),
       supabase.from("products").select("*").is("archived_at", null).order("name"),
       supabase.from("product_variants").select("*").order("sort_order"),
@@ -49,6 +50,7 @@ export default async function POSPage() {
       supabase.from("customers").select("id, full_name, mobile").is("archived_at", null).order("full_name").limit(500),
       supabase.from("shifts").select("id").eq("cashier_id", session.profile.id).eq("status", "open").maybeSingle(),
       supabase.from("settings").select("value").eq("key", "tax").single(),
+      supabase.from("settings").select("value").eq("key", "receipt").single(),
     ]);
     categories = c.data ?? [];
     products = p.data ?? [];
@@ -62,6 +64,8 @@ export default async function POSPage() {
     customers = cust.data ?? [];
     shiftId = shift.data?.id ?? null;
     taxConfig = (tax.data?.value ?? {}) as Record<string, unknown>;
+    gcashQrImage = (receipt.data?.value as { gcash_qr_image?: string } | null)
+      ?.gcash_qr_image ?? null;
   }
 
   return (
@@ -78,6 +82,7 @@ export default async function POSPage() {
       customers={customers}
       shiftId={shiftId}
       taxConfig={taxConfig}
+      gcashQrImage={gcashQrImage}
       canManualDiscount={can(session.permissions, session.profile.role, "pos.discount.manual")}
       preview={session.preview}
     />

@@ -55,7 +55,9 @@ export interface OrderListRow {
   status: OrderStatus;
   payment_status: PaymentStatus;
   total: number;
+  amount_paid: number;
   created_at: string;
+  tab_id: string | null;
   courtside_label: string | null;
   customers: { full_name: string } | null;
   tabs: { name: string } | null;
@@ -140,6 +142,7 @@ export function OrdersManager({
   tabOrders,
   orders,
   methods,
+  gcashQrImage,
   canSettle,
   canReopen,
   preview,
@@ -148,6 +151,7 @@ export function OrdersManager({
   tabOrders: TabOrderRow[];
   orders: OrderListRow[];
   methods: PaymentMethod[];
+  gcashQrImage: string | null;
   canSettle: boolean;
   canReopen: boolean;
   preview: boolean;
@@ -156,6 +160,7 @@ export function OrdersManager({
   const [settling, setSettling] = useState<TabRow | null>(null);
   const [reopening, setReopening] = useState<TabRow | null>(null);
   const [cancelling, setCancelling] = useState<OrderListRow | null>(null);
+  const [viewingTab, setViewingTab] = useState<TabRow | null>(null);
 
   const tabStats = useMemo(() => {
     const map = new Map<string, { balance: number; count: number }>();
@@ -208,13 +213,16 @@ export function OrdersManager({
                       {formatPeso(stats.balance)}
                       <span className="ml-1 text-xs font-normal text-latte">balance</span>
                     </p>
-                    {canSettle && stats.balance > 0 && (
-                      <div className="mt-3">
+                    <div className="mt-3 flex gap-2">
+                      <Button variant="outline" size="sm" onClick={() => setViewingTab(tab)}>
+                        View orders
+                      </Button>
+                      {canSettle && stats.balance > 0 && (
                         <Button size="sm" onClick={() => setSettling(tab)}>
                           Settle
                         </Button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </CardBody>
                 </Card>
               );
@@ -345,6 +353,7 @@ export function OrdersManager({
           tab={settling}
           balance={tabStats.get(settling.id)?.balance ?? 0}
           methods={methods}
+          gcashQrImage={gcashQrImage}
           onClose={() => setSettling(null)}
         />
       )}
@@ -353,6 +362,13 @@ export function OrdersManager({
       )}
       {cancelling && (
         <CancelOrderDialog order={cancelling} onClose={() => setCancelling(null)} />
+      )}
+      {viewingTab && (
+        <TabOrdersDialog
+          tab={viewingTab}
+          orders={orders.filter((o) => o.tab_id === viewingTab.id)}
+          onClose={() => setViewingTab(null)}
+        />
       )}
     </div>
   );
@@ -373,11 +389,13 @@ function SettleDialog({
   tab,
   balance,
   methods,
+  gcashQrImage,
   onClose,
 }: {
   tab: TabRow;
   balance: number;
   methods: PaymentMethod[];
+  gcashQrImage: string | null;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -542,6 +560,26 @@ function SettleDialog({
                     </Field>
                   )}
                 </div>
+                {row.method === "gcash" && (
+                  <div className="mt-3 flex items-center gap-3 rounded-lg bg-cream p-3">
+                    {gcashQrImage ? (
+                      <>
+                        <img
+                          src={gcashQrImage}
+                          alt="GCash QR code"
+                          className="h-28 w-28 shrink-0 rounded-lg border border-line bg-white object-contain"
+                        />
+                        <p className="text-sm text-roast">
+                          Show this to the customer to scan in their GCash app.
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm text-latte">
+                        No GCash QR code on file — add one in Settings → Receipt.
+                      </p>
+                    )}
+                  </div>
+                )}
                 <div className="mt-2 flex items-center justify-between">
                   {m?.kind === "cash" && change !== null ? (
                     <p
@@ -734,6 +772,92 @@ function CancelOrderDialog({
           </Button>
         </div>
       </form>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Tab orders dialog — every order rung up under a tab, with links to each
+// order's own detail/receipt page (only the last 100 orders are loaded on
+// this page, so a very old tab's earlier rounds may not all show here).
+// ---------------------------------------------------------------------------
+
+function TabOrdersDialog({
+  tab,
+  orders,
+  onClose,
+}: {
+  tab: TabRow;
+  orders: OrderListRow[];
+  onClose: () => void;
+}) {
+  const sorted = [...orders].sort((a, b) => a.created_at.localeCompare(b.created_at));
+  const total = sorted.reduce((s, o) => s + Number(o.total), 0);
+  const paid = sorted.reduce((s, o) => s + Number(o.amount_paid), 0);
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`Orders on ${tab.name}`}
+      description={`${sorted.length} order${sorted.length === 1 ? "" : "s"} · ${formatPeso(total)} total · ${formatPeso(total - paid)} balance`}
+      className="max-w-2xl"
+    >
+      <div className="space-y-3">
+        {sorted.length === 0 ? (
+          <EmptyState title="No orders yet" description="Nothing has been rung up on this tab." />
+        ) : (
+          <Table>
+            <THead>
+              <TH>Order</TH>
+              <TH>Time</TH>
+              <TH className="text-right">Total</TH>
+              <TH>Status</TH>
+              <TH>Payment</TH>
+              <TH className="text-right">Receipt</TH>
+            </THead>
+            <TBody>
+              {sorted.map((o) => (
+                <TR key={o.id}>
+                  <TD className="font-medium">
+                    <Link
+                      href={`/orders/${o.id}`}
+                      className="text-espresso underline-offset-2 hover:underline"
+                    >
+                      {o.order_number}
+                    </Link>
+                  </TD>
+                  <TD className="text-latte">{formatTime(o.created_at)}</TD>
+                  <TD className="text-right text-espresso">{formatPeso(o.total)}</TD>
+                  <TD>
+                    <Badge tone={STATUS_BADGES[o.status].tone}>
+                      {STATUS_BADGES[o.status].label}
+                    </Badge>
+                  </TD>
+                  <TD>
+                    <Badge tone={PAYMENT_BADGES[o.payment_status].tone}>
+                      {PAYMENT_BADGES[o.payment_status].label}
+                    </Badge>
+                  </TD>
+                  <TD className="text-right">
+                    <Link
+                      href={`/receipt/${o.id}`}
+                      className="text-court underline-offset-2 hover:underline"
+                    >
+                      View
+                    </Link>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
+        )}
+        <div className="flex justify-end pt-1">
+          <Button variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
     </Dialog>
   );
 }

@@ -194,12 +194,32 @@ function ReceiptForm({
     width_mm: Number(value.width_mm ?? 58),
     footer: String(value.footer ?? ""),
     show_loyalty_points: Boolean(value.show_loyalty_points ?? true),
+    gcash_qr_image: (value.gcash_qr_image as string | null) ?? null,
   });
+  const [qrError, setQrError] = useState<string | null>(null);
+
+  function onQrFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setQrError(null);
+    if (!file.type.startsWith("image/")) {
+      setQrError("Choose an image file (PNG or JPG).");
+      return;
+    }
+    if (file.size > 1_500_000) {
+      setQrError("Image is too large — use one under 1.5 MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setForm((f) => ({ ...f, gcash_qr_image: reader.result as string }));
+    reader.readAsDataURL(file);
+  }
 
   return (
     <SectionCard
       title="Receipt"
-      description="Thermal printer format and receipt footer."
+      description="Thermal printer format, receipt footer, and the GCash QR code shown at checkout."
     >
       <form
         className="space-y-4"
@@ -232,6 +252,39 @@ function ReceiptForm({
           onChange={(v) => setForm({ ...form, show_loyalty_points: v })}
           label="Show loyalty points on receipts"
         />
+        <Field
+          label="GCash QR code"
+          hint="Shown to the customer whenever GCash is selected as the payment method, in POS and tab settlement."
+        >
+          <div className="flex items-start gap-3">
+            {form.gcash_qr_image && (
+              <img
+                src={form.gcash_qr_image}
+                alt="GCash QR code"
+                className="h-24 w-24 rounded-lg border border-line object-contain"
+              />
+            )}
+            <div className="space-y-1.5">
+              <input
+                type="file"
+                accept="image/*"
+                disabled={disabled}
+                onChange={onQrFile}
+                className="block text-sm text-roast file:mr-3 file:rounded-lg file:border-0 file:bg-court file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-court-deep"
+              />
+              {form.gcash_qr_image && (
+                <button
+                  type="button"
+                  onClick={() => setForm((f) => ({ ...f, gcash_qr_image: null }))}
+                  className="text-xs text-danger underline underline-offset-2"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
+          {qrError && <p className="mt-1 text-xs text-danger">{qrError}</p>}
+        </Field>
         <div className="flex items-center justify-end gap-3">
           <SaveState state={state} />
           <Button type="submit" loading={saving} disabled={disabled}>
