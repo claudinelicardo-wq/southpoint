@@ -65,6 +65,7 @@ export function POSScreen({
   customers,
   shiftId,
   taxConfig,
+  gcashQrImage,
   canManualDiscount,
   preview,
 }: {
@@ -80,6 +81,7 @@ export function POSScreen({
   customers: CustomerLite[];
   shiftId: string | null;
   taxConfig: Record<string, unknown>;
+  gcashQrImage: string | null;
   canManualDiscount: boolean;
   preview: boolean;
 }) {
@@ -252,7 +254,7 @@ export function POSScreen({
     (cart.orderType !== "courtside" || cart.courtsideLabel.trim() !== "");
 
   return (
-    <div className="flex h-[calc(100dvh-8.5rem)] min-h-[480px] gap-4">
+    <div className="flex flex-col gap-4 lg:h-[calc(100dvh-8.5rem)] lg:min-h-[480px] lg:flex-row">
       {/* ------------------------------------------------ product browser */}
       <div className="flex min-w-0 flex-1 flex-col">
         {preview && (
@@ -310,7 +312,7 @@ export function POSScreen({
             />
           ))}
         </div>
-        <div className="grid flex-1 auto-rows-min grid-cols-2 gap-2.5 overflow-y-auto pb-4 sm:grid-cols-3 xl:grid-cols-4">
+        <div className="grid auto-rows-min grid-cols-2 gap-2.5 pb-4 sm:grid-cols-3 lg:flex-1 lg:overflow-y-auto xl:grid-cols-4">
           {visibleProducts.map((p) => {
             const stock = p.inventory_item_id ? stockByItem.get(p.inventory_item_id) : undefined;
             const outOfStock = p.kind === "retail" && stock !== undefined && stock <= 0;
@@ -352,7 +354,7 @@ export function POSScreen({
       </div>
 
       {/* ------------------------------------------------ order panel */}
-      <div className="flex w-80 shrink-0 flex-col rounded-(--radius-card) border border-line bg-paper shadow-(--shadow-card) xl:w-96">
+      <div className="flex w-full flex-col rounded-(--radius-card) border border-line bg-paper shadow-(--shadow-card) lg:w-80 lg:shrink-0 xl:w-96">
         <div className="border-b border-line p-3">
           <div className="grid grid-cols-4 gap-1">
             {(Object.keys(ORDER_TYPE_LABELS) as OrderType[]).map((t) => (
@@ -417,7 +419,7 @@ export function POSScreen({
           </Select>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3">
+        <div className="max-h-72 overflow-y-auto p-3 lg:max-h-none lg:flex-1">
           {cart.items.length === 0 ? (
             <p className="py-12 text-center text-sm text-latte">
               Tap items to start an order.
@@ -553,6 +555,7 @@ export function POSScreen({
         <PaymentDialog
           total={totals.total}
           methods={paymentMethods}
+          gcashQrImage={gcashQrImage}
           busy={busy}
           onSubmit={(payments) => checkout(payments, false)}
           onClose={() => setPayOpen(false)}
