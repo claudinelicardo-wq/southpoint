@@ -70,6 +70,7 @@ export function SettingsForms({
       )}
       <BusinessProfileForm settings={settings} disabled={preview} />
       <ReceiptForm settings={settings} disabled={preview} />
+      <PreordersForm settings={settings} disabled={preview} />
       <TaxForm settings={settings} disabled={preview || !isOwner} ownerOnly />
       <InventoryPolicyForm settings={settings} disabled={preview || !isOwner} ownerOnly />
       <ShiftsForm settings={settings} disabled={preview || !isOwner} ownerOnly />
@@ -292,6 +293,102 @@ function ReceiptForm({
           </Button>
         </div>
       </form>
+    </SectionCard>
+  );
+}
+
+function PreordersForm({
+  settings,
+  disabled,
+}: {
+  settings: SettingRow[];
+  disabled: boolean;
+}) {
+  const value = useSetting(settings, "preorders");
+  const missing = !settings.some((s) => s.key === "preorders");
+  const { save, state, saving, message } = useSave();
+  const [form, setForm] = useState({
+    enabled: Boolean(value.enabled ?? false),
+    open_time: String(value.open_time ?? "10:00"),
+    close_time: String(value.close_time ?? "21:00"),
+    // Strings while editing — Number("") snaps a controlled input back to 0.
+    slot_capacity: String(value.slot_capacity ?? 4),
+    lead_minutes: String(value.lead_minutes ?? 45),
+  });
+
+  return (
+    <SectionCard
+      title="Pre-orders"
+      description="The public pre-order page at /preorder: customers pay via your GCash QR and pick a 30-minute pickup slot; staff verify and confirm on the Pre-orders page."
+    >
+      {missing ? (
+        <Alert tone="warning">
+          Apply migration 0014_preorders.sql to the database first (Supabase dashboard → SQL
+          editor), then reload this page.
+        </Alert>
+      ) : (
+        <form
+          className="space-y-4"
+          onSubmit={(e) => {
+            e.preventDefault();
+            save("preorders", {
+              ...form,
+              slot_capacity: Math.max(1, Number(form.slot_capacity) || 4),
+              lead_minutes: Math.max(0, Number(form.lead_minutes) || 0),
+            });
+          }}
+        >
+          {message && <Alert tone="danger">{message}</Alert>}
+          <Switch
+            checked={form.enabled}
+            disabled={disabled}
+            onChange={(v) => setForm({ ...form, enabled: v })}
+            label="Accept pre-orders"
+          />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="First pickup slot">
+              <Input
+                type="time"
+                value={form.open_time}
+                disabled={disabled}
+                onChange={(e) => setForm({ ...form, open_time: e.target.value })}
+              />
+            </Field>
+            <Field label="Last pickup ends">
+              <Input
+                type="time"
+                value={form.close_time}
+                disabled={disabled}
+                onChange={(e) => setForm({ ...form, close_time: e.target.value })}
+              />
+            </Field>
+            <Field label="Max orders per 30-min slot">
+              <Input
+                type="number"
+                min="1"
+                value={form.slot_capacity}
+                disabled={disabled}
+                onChange={(e) => setForm({ ...form, slot_capacity: e.target.value })}
+              />
+            </Field>
+            <Field label="Lead time (minutes)" hint="Earliest pickup is this long from now.">
+              <Input
+                type="number"
+                min="0"
+                value={form.lead_minutes}
+                disabled={disabled}
+                onChange={(e) => setForm({ ...form, lead_minutes: e.target.value })}
+              />
+            </Field>
+          </div>
+          <div className="flex items-center justify-end gap-3">
+            <SaveState state={state} />
+            <Button type="submit" loading={saving} disabled={disabled}>
+              Save
+            </Button>
+          </div>
+        </form>
+      )}
     </SectionCard>
   );
 }

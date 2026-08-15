@@ -69,6 +69,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", anyOf: [], section: "operate" },
   { label: "POS", href: "/pos", anyOf: ["pos.sell"], section: "operate" },
   { label: "Active Orders", href: "/orders", anyOf: ["orders.view"], section: "operate" },
+  { label: "Pre-orders", href: "/preorders", anyOf: ["orders.view"], section: "operate" },
   { label: "Kitchen / Bar", href: "/kds", anyOf: ["kds.view"], section: "operate" },
   { label: "Shifts", href: "/shifts", anyOf: ["shifts.own", "shifts.manage"], section: "operate" },
   { label: "Menu", href: "/menu", anyOf: ["catalog.manage"], section: "manage" },

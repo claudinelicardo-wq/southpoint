@@ -2,7 +2,9 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseUrl, supabaseAnonKey, isSupabaseConfigured } from "./config";
 
-const PUBLIC_PATHS = ["/login", "/auth"];
+// /preorder and its submit API are customer-facing: no staff login required.
+// The page/API guard themselves (service-role data access + validation).
+const PUBLIC_PATHS = ["/login", "/auth", "/preorder", "/api/preorder"];
 
 export async function updateSession(request: NextRequest) {
   if (!isSupabaseConfigured) {
@@ -36,7 +38,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
+  // Exact segment match so "/preorder" does not also open up "/preorders".
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();
