@@ -1,5 +1,6 @@
 "use client";
 
+import { GcashQr } from "@/components/gcash-qr";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
@@ -149,26 +150,7 @@ export function PaymentDialog({
                   <div />
                 )}
               </div>
-              {row.method === "gcash" && (
-                <div className="mt-3 flex items-center gap-3 rounded-lg bg-cream p-3">
-                  {gcashQrImage ? (
-                    <>
-                      <img
-                        src={gcashQrImage}
-                        alt="GCash QR code"
-                        className="h-28 w-28 shrink-0 rounded-lg border border-line bg-white object-contain"
-                      />
-                      <p className="text-sm text-roast">
-                        Show this to the customer to scan in their GCash app.
-                      </p>
-                    </>
-                  ) : (
-                    <p className="text-sm text-latte">
-                      No GCash QR code on file — add one in Settings → Receipt.
-                    </p>
-                  )}
-                </div>
-              )}
+              {row.method === "gcash" && <GcashQr image={gcashQrImage ?? null} />}
               {rows.length > 1 && (
                 <button
                   className="mt-2 text-xs text-danger underline"

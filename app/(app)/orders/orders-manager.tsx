@@ -1,5 +1,6 @@
 "use client";
 
+import { GcashQr } from "@/components/gcash-qr";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,17 @@ export interface OrderListRow {
   courtside_label: string | null;
   customers: { full_name: string } | null;
   tabs: { name: string } | null;
+  payments: { status: string; payment_methods: { code: string; name: string } | null }[];
+}
+
+/** Distinct method names posted against an order (voided payments excluded). */
+function orderMethods(o: OrderListRow): { code: string; name: string }[] {
+  const seen = new Map<string, string>();
+  for (const p of o.payments ?? []) {
+    if (p.status !== "posted") continue;
+    if (p.payment_methods) seen.set(p.payment_methods.code, p.payment_methods.name);
+  }
+  return [...seen.entries()].map(([code, name]) => ({ code, name }));
 }
 
 // ---------------------------------------------------------------------------
@@ -157,6 +169,7 @@ export function OrdersManager({
   preview: boolean;
 }) {
   const [filter, setFilter] = useState<Filter>("all");
+  const [methodFilter, setMethodFilter] = useState<string>("all");
   const [settling, setSettling] = useState<TabRow | null>(null);
   const [reopening, setReopening] = useState<TabRow | null>(null);
   const [cancelling, setCancelling] = useState<OrderListRow | null>(null);
@@ -176,7 +189,11 @@ export function OrdersManager({
   const openTabs = tabs.filter((t) => t.status === "open");
   const recentlyClosed = canReopen ? tabs.filter(closedRecently) : [];
 
-  const filtered = orders.filter((o) => matchesFilter(o, filter));
+  const filtered = orders.filter(
+    (o) =>
+      matchesFilter(o, filter) &&
+      (methodFilter === "all" || orderMethods(o).some((m) => m.code === methodFilter)),
+  );
 
   return (
     <div className="space-y-8">
@@ -261,7 +278,7 @@ export function OrdersManager({
           <h2 className="font-display text-lg font-semibold text-espresso">
             Recent orders
           </h2>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
             {FILTERS.map((f) => (
               <Button
                 key={f.key}
@@ -272,6 +289,19 @@ export function OrdersManager({
                 {f.label}
               </Button>
             ))}
+            <Select
+              className="h-8 w-auto py-0 text-sm"
+              value={methodFilter}
+              onChange={(e) => setMethodFilter(e.target.value)}
+              aria-label="Filter by payment method"
+            >
+              <option value="all">Any payment</option>
+              {methods.map((m) => (
+                <option key={m.code} value={m.code}>
+                  {m.name}
+                </option>
+              ))}
+            </Select>
           </div>
         </div>
 
@@ -293,6 +323,7 @@ export function OrdersManager({
               <TH>Customer / Tab</TH>
               <TH className="text-right">Total</TH>
               <TH>Payment</TH>
+              <TH>Paid via</TH>
               <TH>Status</TH>
               <TH className="text-right">Actions</TH>
             </THead>
@@ -323,6 +354,11 @@ export function OrdersManager({
                     <Badge tone={PAYMENT_BADGES[o.payment_status].tone}>
                       {PAYMENT_BADGES[o.payment_status].label}
                     </Badge>
+                  </TD>
+                  <TD className="text-latte">
+                    {orderMethods(o)
+                      .map((m) => m.name)
+                      .join(", ") || "—"}
                   </TD>
                   <TD>
                     <Badge tone={STATUS_BADGES[o.status].tone}>
@@ -560,26 +596,7 @@ function SettleDialog({
                     </Field>
                   )}
                 </div>
-                {row.method === "gcash" && (
-                  <div className="mt-3 flex items-center gap-3 rounded-lg bg-cream p-3">
-                    {gcashQrImage ? (
-                      <>
-                        <img
-                          src={gcashQrImage}
-                          alt="GCash QR code"
-                          className="h-28 w-28 shrink-0 rounded-lg border border-line bg-white object-contain"
-                        />
-                        <p className="text-sm text-roast">
-                          Show this to the customer to scan in their GCash app.
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-sm text-latte">
-                        No GCash QR code on file — add one in Settings → Receipt.
-                      </p>
-                    )}
-                  </div>
-                )}
+                {row.method === "gcash" && <GcashQr image={gcashQrImage} />}
                 <div className="mt-2 flex items-center justify-between">
                   {m?.kind === "cash" && change !== null ? (
                     <p

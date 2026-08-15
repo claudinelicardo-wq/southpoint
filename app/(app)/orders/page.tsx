@@ -50,7 +50,7 @@ export default async function OrdersPage() {
       supabase
         .from("orders")
         .select(
-          "id, order_number, order_type, status, payment_status, total, amount_paid, created_at, tab_id, courtside_label, customers(full_name), tabs(name)",
+          "id, order_number, order_type, status, payment_status, total, amount_paid, created_at, tab_id, courtside_label, customers(full_name), tabs(name), payments(status, payment_methods(code, name))",
         )
         .order("created_at", { ascending: false })
         .limit(100),
