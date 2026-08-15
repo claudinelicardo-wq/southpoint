@@ -168,12 +168,78 @@ export function OrdersManager({
   canReopen: boolean;
   preview: boolean;
 }) {
+  const router = useRouter();
   const [filter, setFilter] = useState<Filter>("all");
   const [methodFilter, setMethodFilter] = useState<string>("all");
   const [settling, setSettling] = useState<TabRow | null>(null);
   const [reopening, setReopening] = useState<TabRow | null>(null);
   const [cancelling, setCancelling] = useState<OrderListRow | null>(null);
   const [viewingTab, setViewingTab] = useState<TabRow | null>(null);
+  const [resumeError, setResumeError] = useState<string | null>(null);
+  const [resumingId, setResumingId] = useState<string | null>(null);
+
+  // Rebuild the POS cart from a held order's stored line items, cancel the
+  // held DB order (held orders never deducted stock or took payment, so a
+  // cancel is a pure bookkeeping close), and hand off to the POS screen via
+  // the same localStorage key it already hydrates from.
+  async function resumeHeld(o: OrderListRow) {
+    setResumeError(null);
+    setResumingId(o.id);
+    const supabase = createClient();
+    const { data: items, error } = await supabase
+      .from("order_items")
+      .select(
+        "product_id, variant_id, product_name, variant_name, qty, unit_price, modifiers_price, notes, products(kind), order_item_modifiers(option_id, option_name)",
+      )
+      .eq("order_id", o.id);
+    if (error || !items || items.length === 0) {
+      setResumeError(error?.message ?? "This held order has no items to resume.");
+      setResumingId(null);
+      return;
+    }
+    const cartItems = items.map((i) => {
+      const mods = (i.order_item_modifiers as { option_id: string | null; option_name: string }[]) ?? [];
+      return {
+        key: crypto.randomUUID(),
+        product_id: i.product_id as string,
+        name: i.product_name as string,
+        kind: ((i.products as unknown as { kind: string } | null)?.kind ?? "prepared") as
+          | "prepared"
+          | "retail",
+        variant_id: (i.variant_id as string | null) ?? null,
+        variant_name: (i.variant_name as string | null) ?? null,
+        qty: Number(i.qty),
+        unit_price: Number(i.unit_price),
+        mod_price: Number(i.modifiers_price),
+        modifier_option_ids: mods.map((m) => m.option_id).filter((id): id is string => id !== null),
+        modifier_names: mods.map((m) => m.option_name),
+        notes: (i.notes as string | null) ?? "",
+      };
+    });
+    const { error: cancelError } = await supabase.rpc("order_cancel", {
+      p_order: o.id,
+      p_reason: "Resumed to POS cart",
+    });
+    if (cancelError) {
+      setResumeError(cancelError.message);
+      setResumingId(null);
+      return;
+    }
+    localStorage.setItem(
+      "southpoint.pos.cart.v1",
+      JSON.stringify({
+        items: cartItems,
+        discounts: [],
+        orderType: o.order_type,
+        tabId: o.tab_id ?? "",
+        tabName: "",
+        courtsideLabel: o.courtside_label ?? "",
+        customerId: "",
+        notes: "",
+      }),
+    );
+    router.push("/pos");
+  }
 
   const tabStats = useMemo(() => {
     const map = new Map<string, { balance: number; count: number }>();
@@ -305,6 +371,12 @@ export function OrdersManager({
           </div>
         </div>
 
+        {resumeError && (
+          <Alert tone="danger" className="mb-3">
+            {resumeError}
+          </Alert>
+        )}
+
         {filtered.length === 0 ? (
           <EmptyState
             title={orders.length === 0 ? "No orders yet" : "No matching orders"}
@@ -367,14 +439,24 @@ export function OrdersManager({
                   </TD>
                   <TD className="text-right">
                     {(o.status === "open" || o.status === "held") && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-danger"
-                        onClick={() => setCancelling(o)}
-                      >
-                        Cancel
-                      </Button>
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          loading={resumingId === o.id}
+                          onClick={() => resumeHeld(o)}
+                        >
+                          Resume
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-danger"
+                          onClick={() => setCancelling(o)}
+                        >
+                          Cancel
+                        </Button>
+                      </>
                     )}
                   </TD>
                 </TR>

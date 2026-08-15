@@ -32,7 +32,7 @@ export default async function ExpensesPage() {
       supabase
         .from("expenses")
         .select(
-          "id, exp_number, expense_date, vendor, description, amount, method, reference_no, is_recurring, notes, status, created_by, created_at, expense_categories(name)",
+          "id, exp_number, expense_date, vendor, description, amount, method, reference_no, receipt_url, is_recurring, notes, status, created_by, created_at, expense_categories(name)",
         )
         .order("expense_date", { ascending: false })
         .limit(200),

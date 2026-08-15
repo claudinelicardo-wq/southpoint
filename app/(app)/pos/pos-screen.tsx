@@ -13,7 +13,7 @@ import type {
   Product,
   ProductVariant,
 } from "@/lib/catalog-types";
-import { formatPeso } from "@/lib/format";
+import { formatDateTime, formatPeso, manilaDateKey } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
@@ -64,6 +64,7 @@ export function POSScreen({
   openTabs,
   customers,
   shiftId,
+  shiftOpenedAt,
   taxConfig,
   gcashQrImage,
   canManualDiscount,
@@ -80,6 +81,7 @@ export function POSScreen({
   openTabs: OpenTab[];
   customers: CustomerLite[];
   shiftId: string | null;
+  shiftOpenedAt: string | null;
   taxConfig: Record<string, unknown>;
   gcashQrImage: string | null;
   canManualDiscount: boolean;
@@ -248,6 +250,13 @@ export function POSScreen({
   }
 
   const needsShift = !preview && !shiftId;
+  // A shift opened on a previous Manila business day silently corrupts cash
+  // reconciliation — surface it loudly instead of letting sales pile onto it.
+  const staleShift =
+    !preview &&
+    shiftId !== null &&
+    shiftOpenedAt !== null &&
+    manilaDateKey(shiftOpenedAt) < manilaDateKey(new Date().toISOString());
   const canCharge =
     cart.items.length > 0 &&
     !needsShift &&
@@ -270,6 +279,22 @@ export function POSScreen({
               <Button size="sm" onClick={() => setShiftOpenDialog(true)}>
                 Open shift
               </Button>
+            </div>
+          </Alert>
+        )}
+        {staleShift && (
+          <Alert tone="danger" className="mb-3" title="Shift left open from a previous day">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>
+                This shift was opened {shiftOpenedAt ? formatDateTime(shiftOpenedAt) : ""}. Close
+                it with a cash count and open a fresh one before selling, or today&apos;s cash
+                won&apos;t reconcile.
+              </span>
+              <Link href="/shifts">
+                <Button size="sm" variant="danger">
+                  Go to Shifts
+                </Button>
+              </Link>
             </div>
           </Alert>
         )}

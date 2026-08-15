@@ -28,6 +28,7 @@ export interface ExpenseRow {
   amount: number;
   method: string;
   reference_no: string | null;
+  receipt_url: string | null;
   is_recurring: boolean;
   notes: string | null;
   status: ExpenseStatus;
@@ -300,6 +301,16 @@ export function ExpensesManager({
                       Recurring
                     </Badge>
                   )}
+                  {e.receipt_url && (
+                    <a
+                      href={e.receipt_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="ml-2 text-xs text-court underline underline-offset-2"
+                    >
+                      Receipt
+                    </a>
+                  )}
                 </TD>
                 <TD className="text-right font-medium text-espresso">
                   {formatPeso(e.amount)}
@@ -377,6 +388,7 @@ function RecordExpenseDialog({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [receipt, setReceipt] = useState<{ file: File; preview: string } | null>(null);
   const [form, setForm] = useState({
     date: manilaToday(),
     category: categories[0]?.id ?? "",
@@ -388,6 +400,38 @@ function RecordExpenseDialog({
     recurring: false,
     notes: "",
   });
+
+  function onReceiptFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file) return;
+    setError(null);
+    if (!file.type.startsWith("image/")) {
+      setError("Receipt must be an image (photo or screenshot).");
+      return;
+    }
+    if (receipt) URL.revokeObjectURL(receipt.preview);
+    setReceipt({ file, preview: URL.createObjectURL(file) });
+  }
+
+  /** Downscale to ≤1600px JPEG so uploads stay small on café wifi. */
+  async function compressReceipt(file: File): Promise<Blob> {
+    try {
+      const bitmap = await createImageBitmap(file);
+      const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+      if (scale === 1 && file.size < 1_000_000) return file;
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.round(bitmap.width * scale);
+      canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      const blob = await new Promise<Blob | null>((resolve) =>
+        canvas.toBlob(resolve, "image/jpeg", 0.82),
+      );
+      return blob ?? file;
+    } catch {
+      return file; // unsupported format — upload as-is, server enforces limits
+    }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -402,6 +446,21 @@ function RecordExpenseDialog({
       return;
     }
     setLoading(true);
+
+    let receiptUrl: string | null = null;
+    if (receipt) {
+      const body = new FormData();
+      body.append("file", await compressReceipt(receipt.file), "receipt.jpg");
+      const res = await fetch("/api/expense-receipt", { method: "POST", body });
+      const json = (await res.json().catch(() => null)) as { url?: string; error?: string } | null;
+      if (!res.ok || !json?.url) {
+        setError(json?.error ?? "Receipt upload failed. Try again.");
+        setLoading(false);
+        return;
+      }
+      receiptUrl = json.url;
+    }
+
     const supabase = createClient();
     const { error: rpcError } = await supabase.rpc("expense_create", {
       p_date: form.date,
@@ -411,7 +470,7 @@ function RecordExpenseDialog({
       p_amount: amount,
       p_method: form.method,
       p_reference: form.reference.trim() || null,
-      p_receipt_url: null,
+      p_receipt_url: receiptUrl,
       p_recurring: form.recurring,
       p_notes: form.notes.trim() || null,
     });
@@ -502,6 +561,42 @@ function RecordExpenseDialog({
             onChange={(e) => setForm({ ...form, reference: e.target.value })}
             placeholder="Optional"
           />
+        </Field>
+        <Field
+          label="Receipt photo"
+          hint="Take a photo or attach a screenshot — kept with the expense for audit."
+        >
+          <div className="flex items-start gap-3">
+            {receipt && (
+              /* eslint-disable-next-line @next/next/no-img-element -- local object URL preview */
+              <img
+                src={receipt.preview}
+                alt="Receipt preview"
+                className="h-24 w-24 rounded-lg border border-line object-cover"
+              />
+            )}
+            <div className="space-y-1.5">
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={onReceiptFile}
+                className="block text-sm text-roast file:mr-3 file:rounded-lg file:border-0 file:bg-court file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-court-deep"
+              />
+              {receipt && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    URL.revokeObjectURL(receipt.preview);
+                    setReceipt(null);
+                  }}
+                  className="text-xs text-danger underline underline-offset-2"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          </div>
         </Field>
         <Switch
           checked={form.recurring}

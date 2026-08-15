@@ -9,7 +9,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Field, Input, Textarea } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { cn } from "@/lib/cn";
-import { formatDateTime, formatPeso } from "@/lib/format";
+import { formatDateTime, formatPeso, manilaDateKey } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -309,6 +309,13 @@ export function ShiftsManager({
               </form>
             </CardBody>
           </Card>
+        )}
+
+        {openShift && manilaDateKey(openShift.opened_at) < manilaDateKey(new Date().toISOString()) && (
+          <Alert tone="danger" title="Shift left open from a previous day">
+            Close this shift with a cash count and open a fresh one for today — sales posted onto
+            an old shift make the cash reconciliation meaningless.
+          </Alert>
         )}
 
         {openShift && (

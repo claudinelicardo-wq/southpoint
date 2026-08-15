@@ -32,6 +32,7 @@ export default async function POSPage() {
   let openTabs: OpenTab[] = [];
   let customers: CustomerLite[] = [];
   let shiftId: string | null = null;
+  let shiftOpenedAt: string | null = null;
   let taxConfig: Record<string, unknown> = {};
   let gcashQrImage: string | null = null;
 
@@ -48,7 +49,7 @@ export default async function POSPage() {
       supabase.from("payment_methods").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("tabs").select("id, name").eq("status", "open").order("opened_at"),
       supabase.from("customers").select("id, full_name, mobile").is("archived_at", null).order("full_name").limit(500),
-      supabase.from("shifts").select("id").eq("cashier_id", session.profile.id).eq("status", "open").maybeSingle(),
+      supabase.from("shifts").select("id, opened_at").eq("cashier_id", session.profile.id).eq("status", "open").maybeSingle(),
       supabase.from("settings").select("value").eq("key", "tax").single(),
       supabase.from("settings").select("value").eq("key", "receipt").single(),
     ]);
@@ -63,6 +64,7 @@ export default async function POSPage() {
     openTabs = tabs.data ?? [];
     customers = cust.data ?? [];
     shiftId = shift.data?.id ?? null;
+    shiftOpenedAt = shift.data?.opened_at ?? null;
     taxConfig = (tax.data?.value ?? {}) as Record<string, unknown>;
     gcashQrImage = (receipt.data?.value as { gcash_qr_image?: string } | null)
       ?.gcash_qr_image ?? null;
@@ -81,6 +83,7 @@ export default async function POSPage() {
       openTabs={openTabs}
       customers={customers}
       shiftId={shiftId}
+      shiftOpenedAt={shiftOpenedAt}
       taxConfig={taxConfig}
       gcashQrImage={gcashQrImage}
       canManualDiscount={can(session.permissions, session.profile.role, "pos.discount.manual")}
