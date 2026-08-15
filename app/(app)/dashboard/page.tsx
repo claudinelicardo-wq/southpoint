@@ -89,21 +89,83 @@ export default async function DashboardPage() {
     const supabase = await createClient();
     const today = manilaToday();
 
-    if (c("reports.sales")) {
-      const [ordersRes, paymentsRes] = await Promise.all([
-        supabase
-          .from("orders")
-          .select("id, total, cogs_total")
-          .eq("status", "completed")
-          .gte("completed_at", today.from)
-          .lte("completed_at", today.to),
-        supabase
-          .from("payments")
-          .select("amount, payment_methods(name)")
-          .eq("status", "posted")
-          .gte("created_at", today.from)
-          .lte("created_at", today.to),
+    // Every query below is independent — none needs another's result — so
+    // they're all fired together instead of one-await-at-a-time, which
+    // previously serialized up to 7 network round trips before the
+    // dashboard (the page every login lands on) could render at all.
+    const [salesRes, weekOrdersRes, tabsRes, inventoryRes, topSellersRes, payablesRes, courtRes] =
+      await Promise.all([
+        c("reports.sales")
+          ? Promise.all([
+              supabase
+                .from("orders")
+                .select("id, total, cogs_total")
+                .eq("status", "completed")
+                .gte("completed_at", today.from)
+                .lte("completed_at", today.to),
+              supabase
+                .from("payments")
+                .select("amount, payment_methods(name)")
+                .eq("status", "posted")
+                .gte("created_at", today.from)
+                .lte("created_at", today.to),
+            ])
+          : Promise.resolve(null),
+        c("reports.sales")
+          ? supabase
+              .from("orders")
+              .select("total, completed_at")
+              .eq("status", "completed")
+              .gte("completed_at", weekAgoISO())
+          : Promise.resolve(null),
+        c("tabs.manage") || c("orders.view")
+          ? Promise.all([
+              supabase.from("tabs").select("id, name").eq("status", "open"),
+              supabase
+                .from("orders")
+                .select("tab_id, total, amount_paid")
+                .eq("status", "completed")
+                .not("tab_id", "is", null)
+                .neq("payment_status", "paid"),
+            ])
+          : Promise.resolve(null),
+        c("inventory.view")
+          ? Promise.all([
+              supabase
+                .from("inventory_items")
+                .select("id, name, current_stock, reorder_level, base_unit")
+                .is("archived_at", null)
+                .gt("reorder_level", 0),
+              supabase
+                .from("inventory_batches")
+                .select("expires_at, qty_remaining, inventory_items(name)")
+                .gt("qty_remaining", 0)
+                .not("expires_at", "is", null)
+                .lte("expires_at", expiryCutoff())
+                .order("expires_at")
+                .limit(8),
+              supabase
+                .from("waste_records")
+                .select("cost")
+                .eq("status", "approved")
+                .gte("created_at", today.from),
+            ])
+          : Promise.resolve(null),
+        c("reports.sales")
+          ? supabase
+              .from("order_items")
+              .select("product_name, qty, line_total, orders!inner(status, completed_at)")
+              .eq("orders.status", "completed")
+              .gte("orders.completed_at", today.from)
+          : Promise.resolve(null),
+        c("purchasing.view")
+          ? supabase.from("v_po_payables").select("balance")
+          : Promise.resolve(null),
+        supabase.from("court_sessions").select("*, tabs(name)").is("ended_at", null).maybeSingle(),
       ]);
+
+    if (salesRes) {
+      const [ordersRes, paymentsRes] = salesRes;
       const orders = ordersRes.data ?? [];
       const gross = orders.reduce((s, o) => s + Number(o.total), 0);
       const cogs = orders.reduce((s, o) => s + Number(o.cogs_total), 0);
@@ -120,33 +182,21 @@ export default async function DashboardPage() {
         cogs,
         byMethod: [...byMethod.entries()].map(([name, amount]) => ({ name, amount })),
       };
+    }
 
-      // 7-day trend
-      const { data: weekOrders } = await supabase
-        .from("orders")
-        .select("total, completed_at")
-        .eq("status", "completed")
-        .gte("completed_at", weekAgoISO());
+    if (weekOrdersRes) {
       const fmt = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Manila", dateStyle: "short" });
       const byDay = new Map<string, number>();
       for (const day of weekTrendDays()) byDay.set(day, 0);
-      for (const o of weekOrders ?? []) {
+      for (const o of weekOrdersRes.data ?? []) {
         const d = fmt.format(new Date(o.completed_at as string));
         if (byDay.has(d)) byDay.set(d, (byDay.get(d) ?? 0) + Number(o.total));
       }
       trend = [...byDay.entries()].map(([day, total]) => ({ day: day.slice(5), total }));
     }
 
-    if (c("tabs.manage") || c("orders.view")) {
-      const [{ data: tabs }, { data: tabOrders }] = await Promise.all([
-        supabase.from("tabs").select("id, name").eq("status", "open"),
-        supabase
-          .from("orders")
-          .select("tab_id, total, amount_paid")
-          .eq("status", "completed")
-          .not("tab_id", "is", null)
-          .neq("payment_status", "paid"),
-      ]);
+    if (tabsRes) {
+      const [{ data: tabs }, { data: tabOrders }] = tabsRes;
       tabOptions = tabs ?? [];
       openTabs = (tabs ?? []).map((t) => ({
         ...t,
@@ -156,27 +206,8 @@ export default async function DashboardPage() {
       }));
     }
 
-    if (c("inventory.view")) {
-      const [{ data: items }, { data: batches }, { data: waste }] = await Promise.all([
-        supabase
-          .from("inventory_items")
-          .select("id, name, current_stock, reorder_level, base_unit")
-          .is("archived_at", null)
-          .gt("reorder_level", 0),
-        supabase
-          .from("inventory_batches")
-          .select("expires_at, qty_remaining, inventory_items(name)")
-          .gt("qty_remaining", 0)
-          .not("expires_at", "is", null)
-          .lte("expires_at", expiryCutoff())
-          .order("expires_at")
-          .limit(8),
-        supabase
-          .from("waste_records")
-          .select("cost")
-          .eq("status", "approved")
-          .gte("created_at", today.from),
-      ]);
+    if (inventoryRes) {
+      const [{ data: items }, { data: batches }, { data: waste }] = inventoryRes;
       lowStock = (items ?? [])
         .filter((i) => Number(i.current_stock) <= Number(i.reorder_level))
         .slice(0, 8);
@@ -188,14 +219,9 @@ export default async function DashboardPage() {
       wasteToday = (waste ?? []).reduce((s, w) => s + Number(w.cost ?? 0), 0);
     }
 
-    if (c("reports.sales")) {
-      const { data: itemsToday } = await supabase
-        .from("order_items")
-        .select("product_name, qty, line_total, orders!inner(status, completed_at)")
-        .eq("orders.status", "completed")
-        .gte("orders.completed_at", today.from);
+    if (topSellersRes) {
       const top = new Map<string, { qty: number; revenue: number }>();
-      for (const i of itemsToday ?? []) {
+      for (const i of topSellersRes.data ?? []) {
         const t = top.get(i.product_name) ?? { qty: 0, revenue: 0 };
         t.qty += Number(i.qty);
         t.revenue += Number(i.line_total);
@@ -207,19 +233,11 @@ export default async function DashboardPage() {
         .slice(0, 5);
     }
 
-    if (c("purchasing.view")) {
-      const { data: pay } = await supabase.from("v_po_payables").select("balance");
-      payables = (pay ?? []).reduce((s, p) => s + Math.max(0, Number(p.balance)), 0);
+    if (payablesRes) {
+      payables = (payablesRes.data ?? []).reduce((s, p) => s + Math.max(0, Number(p.balance)), 0);
     }
 
-    {
-      const { data: courtData } = await supabase
-        .from("court_sessions")
-        .select("*, tabs(name)")
-        .is("ended_at", null)
-        .maybeSingle();
-      court = (courtData as CourtSession | null) ?? null;
-    }
+    court = (courtRes.data as CourtSession | null) ?? null;
   }
 
   const maxTrend = Math.max(1, ...trend.map((t) => t.total));
