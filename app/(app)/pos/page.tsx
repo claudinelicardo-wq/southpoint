@@ -90,6 +90,7 @@ export default async function POSPage() {
       taxConfig={taxConfig}
       gcashQrImage={gcashQrImage}
       canManualDiscount={can(session.permissions, session.profile.role, "pos.discount.manual")}
+      canCreateProduct={can(session.permissions, session.profile.role, "catalog.manage")}
       preview={session.preview}
     />
   );

@@ -20,6 +20,7 @@ import { cn } from "@/lib/cn";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { CreateProductDialog } from "./create-product-dialog";
 import { ItemDialog } from "./item-dialog";
 import { PaymentDialog } from "./payment-dialog";
 import {
@@ -69,6 +70,7 @@ export function POSScreen({
   taxConfig,
   gcashQrImage,
   canManualDiscount,
+  canCreateProduct,
   preview,
 }: {
   categories: Category[];
@@ -86,6 +88,7 @@ export function POSScreen({
   taxConfig: Record<string, unknown>;
   gcashQrImage: string | null;
   canManualDiscount: boolean;
+  canCreateProduct: boolean;
   preview: boolean;
 }) {
   const router = useRouter();
@@ -147,6 +150,7 @@ export function POSScreen({
   const [scanAutoAdd, setScanAutoAdd] = useState(true);
   const [scanResult, setScanResult] = useState<{ product: Product; addedAt: number } | null>(null);
   const [scanMiss, setScanMiss] = useState<string | null>(null);
+  const [creatingBarcode, setCreatingBarcode] = useState<string | null>(null);
   const lastScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
 
   function handleScan(code: string) {
@@ -402,9 +406,21 @@ export function POSScreen({
             Scan
           </Button>
         </div>
-        {scanMiss && (
+        {scanMiss && !scanOpen && (
           <Alert tone="warning" className="mb-3">
-            No product matches barcode &ldquo;{scanMiss}&rdquo;.
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>No product matches barcode &ldquo;{scanMiss}&rdquo;.</span>
+              <span className="flex gap-2">
+                {canCreateProduct && (
+                  <Button size="sm" onClick={() => setCreatingBarcode(scanMiss)}>
+                    Add new product
+                  </Button>
+                )}
+                <Button size="sm" variant="ghost" onClick={() => setScanMiss(null)}>
+                  Dismiss
+                </Button>
+              </span>
+            </div>
           </Alert>
         )}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
@@ -666,6 +682,18 @@ export function POSScreen({
       )}
 
       {/* ------------------------------------------------ dialogs */}
+      {creatingBarcode && (
+        <CreateProductDialog
+          barcode={creatingBarcode}
+          categories={categories}
+          onCreated={(product) => {
+            setCreatingBarcode(null);
+            setScanMiss(null);
+            addProduct(product);
+          }}
+          onClose={() => setCreatingBarcode(null)}
+        />
+      )}
       {scanOpen && (
         <Dialog
           open
@@ -684,7 +712,16 @@ export function POSScreen({
               Add to cart automatically (uncheck for a price check only)
             </label>
             {scanMiss && (
-              <Alert tone="warning">No product matches barcode &ldquo;{scanMiss}&rdquo;.</Alert>
+              <Alert tone="warning">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span>No product matches barcode &ldquo;{scanMiss}&rdquo;.</span>
+                  {canCreateProduct && (
+                    <Button size="sm" onClick={() => setCreatingBarcode(scanMiss)}>
+                      Add new product
+                    </Button>
+                  )}
+                </div>
+              </Alert>
             )}
             {scanResult && (
               <div className="flex items-center justify-between rounded-xl bg-cream p-3">

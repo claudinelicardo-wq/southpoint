@@ -1,5 +1,6 @@
 "use client";
 
+import { BarcodeField } from "@/components/barcode-field";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -400,9 +401,9 @@ export function InventoryManager({
               />
             </Field>
             <Field label="Barcode">
-              <Input
+              <BarcodeField
                 value={form.barcode}
-                onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                onChange={(v) => setForm({ ...form, barcode: v })}
               />
             </Field>
             <Field label="Type">

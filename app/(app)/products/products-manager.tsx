@@ -1,5 +1,6 @@
 "use client";
 
+import { BarcodeField } from "@/components/barcode-field";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -353,10 +354,7 @@ function RetailDialog({
             />
           </Field>
           <Field label="Barcode">
-            <Input
-              value={form.barcode}
-              onChange={(e) => setForm({ ...form, barcode: e.target.value })}
-            />
+            <BarcodeField value={form.barcode} onChange={(v) => setForm({ ...form, barcode: v })} />
           </Field>
           <Field label="Purchase unit" hint='e.g. "case of 24"'>
             <Input
