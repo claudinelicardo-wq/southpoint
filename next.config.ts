@@ -11,7 +11,9 @@ const securityHeaders = [
   { key: "X-DNS-Prefetch-Control", value: "on" },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(), interest-cohort=()",
+    // camera=(self): the POS barcode scanner needs it; still blocked for any
+    // third-party iframe. Microphone/geolocation stay off — nothing uses them.
+    value: "camera=(self), microphone=(), geolocation=(), interest-cohort=()",
   },
 ];
 

@@ -27,7 +27,7 @@ export default async function POSPage() {
   let groups: ModifierGroup[] = [];
   let options: ModifierOption[] = [];
   let productGroups: { product_id: string; group_id: string }[] = [];
-  let retailStock: Pick<InventoryItem, "id" | "current_stock">[] = [];
+  let retailStock: Pick<InventoryItem, "id" | "current_stock" | "barcode">[] = [];
   let paymentMethods: PaymentMethod[] = [];
   let openTabs: OpenTab[] = [];
   let customers: CustomerLite[] = [];
@@ -45,7 +45,10 @@ export default async function POSPage() {
       supabase.from("modifier_groups").select("*").is("archived_at", null).order("sort_order"),
       supabase.from("modifier_options").select("*").order("sort_order"),
       supabase.from("product_modifier_groups").select("product_id, group_id"),
-      supabase.from("inventory_items").select("id, current_stock").eq("inventory_type", "retail"),
+      supabase
+        .from("inventory_items")
+        .select("id, current_stock, barcode")
+        .eq("inventory_type", "retail"),
       supabase.from("payment_methods").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("tabs").select("id, name").eq("status", "open").order("opened_at"),
       supabase.from("customers").select("id, full_name, mobile").is("archived_at", null).order("full_name").limit(500),

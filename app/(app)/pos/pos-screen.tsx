@@ -1,5 +1,6 @@
 "use client";
 
+import { BarcodeScanner } from "@/components/barcode-scanner";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -76,7 +77,7 @@ export function POSScreen({
   groups: ModifierGroup[];
   options: ModifierOption[];
   productGroups: { product_id: string; group_id: string }[];
-  retailStock: Pick<InventoryItem, "id" | "current_stock">[];
+  retailStock: Pick<InventoryItem, "id" | "current_stock" | "barcode">[];
   paymentMethods: PaymentMethod[];
   openTabs: OpenTab[];
   customers: CustomerLite[];
@@ -123,6 +124,72 @@ export function POSScreen({
     () => new Map(retailStock.map((r) => [r.id, Number(r.current_stock)])),
     [retailStock],
   );
+
+  // barcode -> inventory_item_id, then inventory_item_id -> product, so a
+  // scan resolves straight to the sellable product regardless of which
+  // table actually stores the barcode.
+  const productByBarcode = useMemo(() => {
+    const itemIdByBarcode = new Map(
+      retailStock.filter((r) => r.barcode).map((r) => [r.barcode as string, r.id]),
+    );
+    const productByItemId = new Map(
+      products.filter((p) => p.inventory_item_id).map((p) => [p.inventory_item_id as string, p]),
+    );
+    const map = new Map<string, Product>();
+    for (const [barcode, itemId] of itemIdByBarcode) {
+      const product = productByItemId.get(itemId);
+      if (product) map.set(barcode, product);
+    }
+    return map;
+  }, [retailStock, products]);
+
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanAutoAdd, setScanAutoAdd] = useState(true);
+  const [scanResult, setScanResult] = useState<{ product: Product; addedAt: number } | null>(null);
+  const [scanMiss, setScanMiss] = useState<string | null>(null);
+  const lastScanRef = useRef<{ code: string; at: number }>({ code: "", at: 0 });
+
+  function handleScan(code: string) {
+    // The camera decoder fires continuously while a code sits in frame, and
+    // a hardware scanner can double-fire — ignore the same code for 2s.
+    const now = Date.now();
+    if (lastScanRef.current.code === code && now - lastScanRef.current.at < 2000) return;
+    lastScanRef.current = { code, at: now };
+
+    const product = productByBarcode.get(code);
+    if (!product) {
+      setScanMiss(code);
+      setScanResult(null);
+      return;
+    }
+    setScanMiss(null);
+    setScanResult({ product, addedAt: now });
+    if (scanAutoAdd) addProduct(product);
+  }
+
+  // Hardware "keyboard wedge" scanners type the code fast (well under human
+  // typing speed) then send Enter. Ignored while any text field has focus so
+  // normal typing never gets mistaken for a scan.
+  useEffect(() => {
+    let buffer = "";
+    let lastKeyAt = 0;
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      if (target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName)) return;
+      const now = Date.now();
+      if (now - lastKeyAt > 75) buffer = "";
+      lastKeyAt = now;
+      if (e.key === "Enter") {
+        if (buffer.length >= 3) handleScan(buffer);
+        buffer = "";
+        return;
+      }
+      if (e.key.length === 1) buffer += e.key;
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- handleScan closes over state via refs/maps that are stable per render; re-subscribing every render is unnecessary
+  }, [productByBarcode, scanAutoAdd]);
 
   const visibleProducts = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -322,7 +389,24 @@ export function POSScreen({
             onChange={(e) => setSearch(e.target.value)}
             className="h-11"
           />
+          <Button
+            type="button"
+            variant="outline"
+            className="h-11 shrink-0"
+            onClick={() => {
+              setScanMiss(null);
+              setScanResult(null);
+              setScanOpen(true);
+            }}
+          >
+            Scan
+          </Button>
         </div>
+        {scanMiss && (
+          <Alert tone="warning" className="mb-3">
+            No product matches barcode &ldquo;{scanMiss}&rdquo;.
+          </Alert>
+        )}
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
           <CategoryPill
             active={activeCategory === "all"}
@@ -582,6 +666,47 @@ export function POSScreen({
       )}
 
       {/* ------------------------------------------------ dialogs */}
+      {scanOpen && (
+        <Dialog
+          open
+          onClose={() => setScanOpen(false)}
+          title="Scan barcode"
+          description="Point the camera at a barcode. A hardware scanner works anywhere on this screen too, dialog or not."
+        >
+          <div className="space-y-3">
+            <BarcodeScanner active={scanOpen} onDetect={handleScan} />
+            <label className="flex items-center gap-2 text-sm text-roast">
+              <input
+                type="checkbox"
+                checked={scanAutoAdd}
+                onChange={(e) => setScanAutoAdd(e.target.checked)}
+              />
+              Add to cart automatically (uncheck for a price check only)
+            </label>
+            {scanMiss && (
+              <Alert tone="warning">No product matches barcode &ldquo;{scanMiss}&rdquo;.</Alert>
+            )}
+            {scanResult && (
+              <div className="flex items-center justify-between rounded-xl bg-cream p-3">
+                <div>
+                  <p className="font-medium text-espresso">{scanResult.product.name}</p>
+                  <p className="text-sm text-latte">{formatPeso(scanResult.product.price)}</p>
+                </div>
+                {!scanAutoAdd && (
+                  <Button size="sm" onClick={() => addProduct(scanResult.product)}>
+                    Add to cart
+                  </Button>
+                )}
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button variant="ghost" onClick={() => setScanOpen(false)}>
+                Done
+              </Button>
+            </div>
+          </div>
+        </Dialog>
+      )}
       {itemDialog && (
         <ItemDialog
           product={itemDialog}
