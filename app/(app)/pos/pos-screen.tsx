@@ -14,7 +14,7 @@ import type {
   Product,
   ProductVariant,
 } from "@/lib/catalog-types";
-import { formatDateTime, formatPeso, manilaDateKey } from "@/lib/format";
+import { formatDateTime, formatPeso, formatQty, manilaDateKey } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 import Link from "next/link";
@@ -50,6 +50,7 @@ export interface CustomerLite {
   id: string;
   full_name: string;
   mobile: string | null;
+  points_balance: number;
 }
 
 const CART_KEY = "southpoint.pos.cart.v1";
@@ -68,6 +69,7 @@ export function POSScreen({
   shiftId,
   shiftOpenedAt,
   taxConfig,
+  loyaltyConfig,
   gcashQrImage,
   canManualDiscount,
   canCreateProduct,
@@ -86,6 +88,7 @@ export function POSScreen({
   shiftId: string | null;
   shiftOpenedAt: string | null;
   taxConfig: Record<string, unknown>;
+  loyaltyConfig: Record<string, unknown>;
   gcashQrImage: string | null;
   canManualDiscount: boolean;
   canCreateProduct: boolean;
@@ -205,9 +208,10 @@ export function POSScreen({
   }, [products, activeCategory, search]);
 
   const totals = useMemo(
-    () => estimateTotals(cart.items, cart.discounts, taxConfig),
-    [cart.items, cart.discounts, taxConfig],
+    () => estimateTotals(cart.items, cart.discounts, taxConfig, loyaltyConfig),
+    [cart.items, cart.discounts, taxConfig, loyaltyConfig],
   );
+  const selectedCustomer = customers.find((c) => c.id === cart.customerId) ?? null;
 
   function addProduct(p: Product) {
     const pVariants = variants.filter((v) => v.product_id === p.id);
@@ -773,6 +777,9 @@ export function POSScreen({
         <DiscountDialog
           discounts={cart.discounts}
           canManual={canManualDiscount}
+          customer={selectedCustomer}
+          loyaltyConfig={loyaltyConfig}
+          subtotalSoFar={totals.subtotal - totals.discountTotal}
           onChange={(d) => setCart((c) => ({ ...c, discounts: d }))}
           onClose={() => setDiscountOpen(false)}
         />
@@ -898,22 +905,54 @@ function NoteButton({
 function DiscountDialog({
   discounts,
   canManual,
+  customer,
+  loyaltyConfig,
+  subtotalSoFar,
   onChange,
   onClose,
 }: {
   discounts: CartDiscount[];
   canManual: boolean;
+  customer: CustomerLite | null;
+  loyaltyConfig: Record<string, unknown>;
+  subtotalSoFar: number;
   onChange: (d: CartDiscount[]) => void;
   onClose: () => void;
 }) {
+  const loyaltyEnabled = Boolean(loyaltyConfig.enabled);
+  const alreadyRedeeming = discounts.some((d) => d.type === "loyalty");
+  const canRedeem =
+    loyaltyEnabled && customer !== null && customer.points_balance > 0 && !alreadyRedeeming;
+  const redemptionRate = Number(loyaltyConfig.redemption_value_per_point ?? 1);
+  const maxRedemptionPct = Number(loyaltyConfig.max_redemption_pct ?? 1);
+  // Most points redeemable right now, capped by balance, the bill, and the
+  // configured max % — the server enforces the real limit at checkout.
+  const maxPoints = canRedeem
+    ? Math.max(
+        0,
+        Math.min(
+          customer!.points_balance,
+          Math.floor((subtotalSoFar * maxRedemptionPct) / redemptionRate),
+        ),
+      )
+    : 0;
+
   const [type, setType] = useState<CartDiscount["type"]>("senior");
   // Kept as a string while editing — Number("") coercing to 0 on every
   // keystroke made the field snap back to "0" and block typing.
   const [value, setValue] = useState("10");
+  const [points, setPoints] = useState("");
   const [reason, setReason] = useState("");
   const [idRef, setIdRef] = useState("");
 
   function add() {
+    if (type === "loyalty") {
+      const numPoints = Number(points) || 0;
+      if (numPoints <= 0) return;
+      onChange([...discounts, { type, value: numPoints, reason, id_reference: "" }]);
+      onClose();
+      return;
+    }
     const numValue = Number(value) || 0;
     const d: CartDiscount = {
       type,
@@ -934,12 +973,14 @@ function DiscountDialog({
             {discounts.map((d, i) => (
               <div key={i} className="flex items-center justify-between rounded-lg bg-cream px-3 py-1.5 text-sm">
                 <span className="capitalize">
-                  {d.type}
+                  {d.type === "loyalty" ? "Loyalty points" : d.type}
                   {d.type === "percent" || d.type === "manual"
                     ? ` ${(d.value * 100).toFixed(0)}%`
                     : d.type === "fixed"
                       ? ` ${formatPeso(d.value)}`
-                      : ""}
+                      : d.type === "loyalty"
+                        ? ` — ${formatQty(d.value)} pts`
+                        : ""}
                 </span>
                 <button
                   className="text-danger underline"
@@ -958,6 +999,7 @@ function DiscountDialog({
             {canManual && <option value="percent">Percent</option>}
             {canManual && <option value="fixed">Fixed amount</option>}
             {canManual && <option value="comp">Complimentary (100%)</option>}
+            {canRedeem && <option value="loyalty">Redeem loyalty points</option>}
           </Select>
         </Field>
         {(type === "percent" || type === "fixed") && (
@@ -968,6 +1010,25 @@ function DiscountDialog({
               max={type === "percent" ? 100 : undefined}
               value={value}
               onChange={(e) => setValue(e.target.value)}
+            />
+          </Field>
+        )}
+        {type === "loyalty" && (
+          <Field
+            label="Points to redeem"
+            hint={
+              canRedeem
+                ? `${customer!.full_name} has ${formatQty(customer!.points_balance)} pts. Up to ${maxPoints} pts usable on this bill (₱${(maxPoints * redemptionRate).toFixed(2)}).`
+                : "Pick a customer with a points balance first."
+            }
+          >
+            <Input
+              type="number"
+              min="1"
+              max={maxPoints}
+              value={points}
+              onChange={(e) => setPoints(e.target.value)}
+              disabled={!canRedeem}
             />
           </Field>
         )}
@@ -983,7 +1044,13 @@ function DiscountDialog({
           <Button variant="ghost" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={add} disabled={(type === "senior" || type === "pwd") && !idRef.trim()}>
+          <Button
+            onClick={add}
+            disabled={
+              ((type === "senior" || type === "pwd") && !idRef.trim()) ||
+              (type === "loyalty" && (!canRedeem || Number(points) <= 0))
+            }
+          >
             Add discount
           </Button>
         </div>

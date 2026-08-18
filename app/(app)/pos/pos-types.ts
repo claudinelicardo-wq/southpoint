@@ -14,8 +14,8 @@ export interface CartItem {
 }
 
 export interface CartDiscount {
-  type: "percent" | "fixed" | "senior" | "pwd" | "manual" | "comp";
-  value: number; // 0-1 for percent/manual, pesos for fixed
+  type: "percent" | "fixed" | "senior" | "pwd" | "manual" | "comp" | "loyalty";
+  value: number; // 0-1 for percent/manual, pesos for fixed, points for loyalty
   reason: string;
   id_reference: string;
 }
@@ -59,6 +59,7 @@ export function estimateTotals(
   items: CartItem[],
   discounts: CartDiscount[],
   tax: Record<string, unknown>,
+  loyalty: Record<string, unknown> = {},
 ) {
   const subtotal = round2(
     items.reduce((s, i) => s + i.qty * (i.unit_price + i.mod_price), 0),
@@ -77,6 +78,10 @@ export function estimateTotals(
       scPwd = true;
     } else if (d.type === "comp") {
       discountTotal += base;
+    } else if (d.type === "loyalty") {
+      const rate = Number(loyalty.redemption_value_per_point ?? 1);
+      const maxPct = Number(loyalty.max_redemption_pct ?? 1);
+      discountTotal += round2(Math.min(d.value * rate, base * maxPct));
     }
   }
   discountTotal = round2(discountTotal);

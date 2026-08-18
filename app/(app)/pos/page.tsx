@@ -14,6 +14,13 @@ import { POSScreen, type PaymentMethod, type OpenTab, type CustomerLite } from "
 
 export const metadata = { title: "POS" };
 
+interface CustomerRow {
+  id: string;
+  full_name: string;
+  mobile: string | null;
+  loyalty_accounts: { points_balance: number } | null;
+}
+
 export default async function POSPage() {
   const session = await getSession();
   if (!session) redirect("/login");
@@ -34,11 +41,12 @@ export default async function POSPage() {
   let shiftId: string | null = null;
   let shiftOpenedAt: string | null = null;
   let taxConfig: Record<string, unknown> = {};
+  let loyaltyConfig: Record<string, unknown> = {};
   let gcashQrImage: string | null = null;
 
   if (!session.preview) {
     const supabase = await createClient();
-    const [c, p, v, g, o, pg, inv, pm, tabs, cust, shift, tax, receipt] = await Promise.all([
+    const [c, p, v, g, o, pg, inv, pm, tabs, cust, shift, tax, receipt, loyalty] = await Promise.all([
       supabase.from("categories").select("*").is("archived_at", null).order("sort_order"),
       supabase.from("products").select("*").is("archived_at", null).order("name"),
       supabase.from("product_variants").select("*").order("sort_order"),
@@ -51,10 +59,16 @@ export default async function POSPage() {
         .eq("inventory_type", "retail"),
       supabase.from("payment_methods").select("*").eq("is_active", true).order("sort_order"),
       supabase.from("tabs").select("id, name").eq("status", "open").order("opened_at"),
-      supabase.from("customers").select("id, full_name, mobile").is("archived_at", null).order("full_name").limit(500),
+      supabase
+        .from("customers")
+        .select("id, full_name, mobile, loyalty_accounts(points_balance)")
+        .is("archived_at", null)
+        .order("full_name")
+        .limit(500),
       supabase.from("shifts").select("id, opened_at").eq("cashier_id", session.profile.id).eq("status", "open").maybeSingle(),
       supabase.from("settings").select("value").eq("key", "tax").single(),
       supabase.from("settings").select("value").eq("key", "receipt").single(),
+      supabase.from("settings").select("value").eq("key", "loyalty").single(),
     ]);
     categories = c.data ?? [];
     products = p.data ?? [];
@@ -65,10 +79,16 @@ export default async function POSPage() {
     retailStock = inv.data ?? [];
     paymentMethods = pm.data ?? [];
     openTabs = tabs.data ?? [];
-    customers = cust.data ?? [];
+    customers = ((cust.data ?? []) as unknown as CustomerRow[]).map((row) => ({
+      id: row.id,
+      full_name: row.full_name,
+      mobile: row.mobile,
+      points_balance: Number(row.loyalty_accounts?.points_balance ?? 0),
+    }));
     shiftId = shift.data?.id ?? null;
     shiftOpenedAt = shift.data?.opened_at ?? null;
     taxConfig = (tax.data?.value ?? {}) as Record<string, unknown>;
+    loyaltyConfig = (loyalty.data?.value ?? {}) as Record<string, unknown>;
     gcashQrImage = (receipt.data?.value as { gcash_qr_image?: string } | null)
       ?.gcash_qr_image ?? null;
   }
@@ -88,6 +108,7 @@ export default async function POSPage() {
       shiftId={shiftId}
       shiftOpenedAt={shiftOpenedAt}
       taxConfig={taxConfig}
+      loyaltyConfig={loyaltyConfig}
       gcashQrImage={gcashQrImage}
       canManualDiscount={can(session.permissions, session.profile.role, "pos.discount.manual")}
       canCreateProduct={can(session.permissions, session.profile.role, "catalog.manage")}
