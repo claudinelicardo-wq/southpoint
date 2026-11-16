@@ -41,12 +41,14 @@ export default async function OrdersPage() {
         .select("id, name, status, opened_at, closed_at")
         .or(`status.eq.open,closed_at.gte.${cutoff}`)
         .order("opened_at", { ascending: false }),
-      // Completed tab orders — balances are computed client-side.
+      // Completed orders on open tabs — balances are computed client-side.
+      // (Closed tabs are always fully paid, so their orders never matter here.)
       supabase
         .from("orders")
-        .select("id, tab_id, total, amount_paid")
+        .select("id, tab_id, total, amount_paid, tabs!inner(status)")
         .not("tab_id", "is", null)
-        .eq("status", "completed"),
+        .eq("status", "completed")
+        .eq("tabs.status", "open"),
       supabase
         .from("orders")
         .select(

@@ -1,5 +1,6 @@
 "use client";
 
+import { ShareLink } from "@/components/share-link";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -99,6 +100,10 @@ export function PreordersManager({
 
   return (
     <div className="space-y-6">
+      <ShareLink
+        path="/preorder"
+        label="Customer pre-order page — share this link on Facebook, Messenger, or a counter QR code"
+      />
       {error && <Alert tone="danger">{error}</Alert>}
 
       {active.length === 0 ? (

@@ -22,14 +22,29 @@ export default async function PreordersPage() {
     // design (public submissions come through the validated API route).
     try {
       const admin = createAdminClient();
-      const { data, error } = await admin
-        .from("preorders")
-        .select("*")
-        .order("pickup_date", { ascending: true })
-        .order("pickup_slot", { ascending: true })
-        .limit(200);
-      if (error) migrationMissing = true;
-      preorders = (data as PreorderRow[] | null) ?? [];
+      // Active orders (all of them, soonest pickup first) plus the most recent
+      // finished ones. A single ascending query with a limit would eventually
+      // fill up with old picked-up orders and hide new ones.
+      const [active, finished] = await Promise.all([
+        admin
+          .from("preorders")
+          .select("*")
+          .in("status", ["pending", "confirmed", "ready"])
+          .order("pickup_date", { ascending: true })
+          .order("pickup_slot", { ascending: true }),
+        admin
+          .from("preorders")
+          .select("*")
+          .not("status", "in", "(pending,confirmed,ready)")
+          .order("pickup_date", { ascending: false })
+          .order("pickup_slot", { ascending: false })
+          .limit(60),
+      ]);
+      if (active.error || finished.error) migrationMissing = true;
+      preorders = [
+        ...((active.data as PreorderRow[] | null) ?? []),
+        ...((finished.data as PreorderRow[] | null) ?? []),
+      ];
     } catch {
       migrationMissing = true;
     }

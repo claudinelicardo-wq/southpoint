@@ -271,9 +271,15 @@ export function OrdersManager({
 
       {openTabs.length > 0 && (
         <section>
-          <h2 className="mb-3 font-display text-lg font-semibold text-espresso">
-            Open tabs
-          </h2>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-display text-lg font-semibold text-espresso">Open tabs</h2>
+            <Link
+              href="/tabs"
+              className="text-sm font-medium text-court underline-offset-2 hover:underline"
+            >
+              Daily / weekly / monthly history →
+            </Link>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {openTabs.map((tab) => {
               const stats = tabStats.get(tab.id) ?? { balance: 0, count: 0 };
@@ -300,6 +306,14 @@ export function OrdersManager({
                       <Button variant="outline" size="sm" onClick={() => setViewingTab(tab)}>
                         View orders
                       </Button>
+                      {stats.balance > 0 && (
+                        <Link
+                          href="/tabs?view=unpaid"
+                          className="inline-flex h-8 items-center rounded-lg px-3 text-sm font-medium text-roast hover:bg-sand"
+                        >
+                          Unpaid bills
+                        </Link>
+                      )}
                       {canSettle && stats.balance > 0 && (
                         <Button size="sm" onClick={() => setSettling(tab)}>
                           Settle
@@ -503,7 +517,7 @@ interface PaymentRowForm {
   tendered: string;
 }
 
-function SettleDialog({
+export function SettleDialog({
   tab,
   balance,
   methods,

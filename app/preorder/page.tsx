@@ -3,6 +3,7 @@ import {
   addDaysYMD,
   manilaNow,
   parsePreorderSettings,
+  slotLabel,
   slotsForDate,
 } from "@/lib/preorders";
 import { Wordmark } from "@/components/wordmark";
@@ -21,6 +22,8 @@ export default async function PreorderPage() {
   let categories: { id: string; name: string }[] = [];
   let gcashQrImage: string | null = null;
   let dates: { date: string; slots: string[] }[] = [];
+  let hours: string | null = null;
+  let today = "";
 
   try {
     const admin = createAdminClient();
@@ -34,13 +37,14 @@ export default async function PreorderPage() {
       closedMessage = "Pre-ordering isn't set up yet. Please order at the counter.";
     } else {
       const settings = parsePreorderSettings(settingsRes.data.value);
+      hours = `${slotLabel(settings.open_time)} – ${slotLabel(settings.close_time)}`;
       if (!settings.enabled) {
         closedMessage = "Pre-ordering is currently closed. Please order at the counter.";
       } else {
         gcashQrImage =
           (receiptRes.data?.value as { gcash_qr_image?: string } | null)?.gcash_qr_image ?? null;
 
-        const today = manilaNow(now).date;
+        today = manilaNow(now).date;
         const candidates = [today, addDaysYMD(today, 1)];
 
         const [p, c, v, counts] = await Promise.all([
@@ -102,13 +106,47 @@ export default async function PreorderPage() {
   }
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-2xl px-4 py-6">
-      <div className="mb-6 flex flex-col items-center gap-1 text-center">
-        <Wordmark />
-        <p className="text-sm text-latte">
-          Order ahead, pay via GCash, and pick up courtside.
-        </p>
-      </div>
+    <main className="mx-auto min-h-screen w-full max-w-2xl px-4 pb-28 pt-6">
+      {/* ------------------------------------------------ landing hero */}
+      <header className="mb-6 overflow-hidden rounded-(--radius-card) border border-line bg-paper shadow-(--shadow-card)">
+        <div className="flex flex-col items-center gap-2 bg-cream px-5 pb-6 pt-7 text-center">
+          <Wordmark />
+          <h1 className="mt-2 font-display text-2xl font-semibold tracking-tight text-espresso sm:text-3xl">
+            Skip the line. Order ahead.
+          </h1>
+          <p className="max-w-md text-sm text-roast">
+            Pick your food and drinks, choose a pickup time, pay with GCash — we&apos;ll have it
+            ready when you get here.
+          </p>
+          {!closedMessage && (
+            <a
+              href="#menu"
+              className="mt-3 inline-flex h-12 items-center rounded-xl bg-court px-6 text-base font-semibold text-white shadow-sm hover:bg-court-deep"
+            >
+              Start your order
+            </a>
+          )}
+          {hours && (
+            <p className="mt-1 text-xs text-latte">Pickup hours: {hours} daily</p>
+          )}
+        </div>
+        <ol className="grid grid-cols-3 divide-x divide-line border-t border-line text-center">
+          {[
+            ["1", "Choose", "Pick from our menu"],
+            ["2", "Pay", "Send via GCash"],
+            ["3", "Pick up", "At your time slot"],
+          ].map(([n, title, sub]) => (
+            <li key={n} className="px-2 py-3">
+              <span className="mx-auto flex h-7 w-7 items-center justify-center rounded-full bg-espresso text-xs font-bold text-paper">
+                {n}
+              </span>
+              <p className="mt-1.5 text-sm font-semibold text-espresso">{title}</p>
+              <p className="text-xs text-latte">{sub}</p>
+            </li>
+          ))}
+        </ol>
+      </header>
+
       {closedMessage ? (
         <div className="rounded-(--radius-card) border border-line bg-paper p-8 text-center shadow-(--shadow-card)">
           <p className="text-espresso">{closedMessage}</p>
@@ -118,6 +156,7 @@ export default async function PreorderPage() {
           products={products}
           categories={categories}
           dates={dates}
+          today={today}
           gcashQrImage={gcashQrImage}
         />
       )}

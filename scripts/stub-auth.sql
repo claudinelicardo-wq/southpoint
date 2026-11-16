@@ -33,3 +33,8 @@ do $$ begin
     create role service_role nologin bypassrls;
   end if;
 end $$;
+
+-- Mirrors Supabase's own default privileges: every function the migration
+-- role creates in `public` is explicitly executable by anon and authenticated.
+-- Without this the harness hides the gap fixed in 0015_function_grants.sql.
+alter default privileges in schema public grant execute on functions to anon, authenticated, service_role;

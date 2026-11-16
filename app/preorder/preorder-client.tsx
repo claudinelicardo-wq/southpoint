@@ -32,11 +32,13 @@ export function PreorderClient({
   products,
   categories,
   dates,
+  today,
   gcashQrImage,
 }: {
   products: PreorderProduct[];
   categories: { id: string; name: string }[];
   dates: { date: string; slots: string[] }[];
+  today: string;
   gcashQrImage: string | null;
 }) {
   const [category, setCategory] = useState<string>("all");
@@ -113,6 +115,7 @@ export function PreorderClient({
       return;
     }
     setDone({ number: json.preorder_number });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   if (done) {
@@ -135,7 +138,7 @@ export function PreorderClient({
   return (
     <form onSubmit={submit} className="space-y-6">
       {/* ------------------------------------------------ menu */}
-      <section>
+      <section id="menu" className="scroll-mt-4">
         <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1">
           <CategoryPill active={category === "all"} onClick={() => setCategory("all")} label="All" />
           {categories.map((c) => (
@@ -156,7 +159,7 @@ export function PreorderClient({
 
       {/* ------------------------------------------------ cart */}
       {cart.length > 0 && (
-        <section className="rounded-(--radius-card) border border-line bg-paper p-4 shadow-(--shadow-card)">
+        <section id="your-order" className="scroll-mt-4 rounded-(--radius-card) border border-line bg-paper p-4 shadow-(--shadow-card)">
           <h2 className="mb-2 font-display text-lg font-semibold text-espresso">Your order</h2>
           <ul className="divide-y divide-line/60">
             {cart.map((l) => (
@@ -209,9 +212,9 @@ export function PreorderClient({
                 setSlot(dates.find((x) => x.date === d)?.slots[0] ?? "");
               }}
             >
-              {dates.map((d, i) => (
+              {dates.map((d) => (
                 <option key={d.date} value={d.date}>
-                  {i === 0 ? `Today (${d.date})` : `Tomorrow (${d.date})`}
+                  {d.date === today ? `Today (${d.date})` : `Tomorrow (${d.date})`}
                 </option>
               ))}
             </Select>
@@ -268,6 +271,22 @@ export function PreorderClient({
           prepared.
         </p>
       </section>
+
+      {/* Sticky cart bar — the cart sits below a long menu on phones. */}
+      {cart.length > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line bg-paper/95 px-4 py-3 backdrop-blur pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          <a
+            href="#your-order"
+            className="mx-auto flex h-12 max-w-2xl items-center justify-between rounded-xl bg-espresso px-5 font-semibold text-paper"
+          >
+            <span>
+              Review order · {cart.reduce((s, l) => s + l.qty, 0)} item
+              {cart.reduce((s, l) => s + l.qty, 0) === 1 ? "" : "s"}
+            </span>
+            <span>{formatPeso(total)}</span>
+          </a>
+        </div>
+      )}
     </form>
   );
 }
