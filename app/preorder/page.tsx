@@ -3,8 +3,8 @@ import {
   addDaysYMD,
   manilaNow,
   parsePreorderSettings,
-  slotLabel,
   slotsForDate,
+  timeLabel,
 } from "@/lib/preorders";
 import { Wordmark } from "@/components/wordmark";
 import { PreorderClient, type PreorderProduct } from "./preorder-client";
@@ -37,7 +37,7 @@ export default async function PreorderPage() {
       closedMessage = "Pre-ordering isn't set up yet. Please order at the counter.";
     } else {
       const settings = parsePreorderSettings(settingsRes.data.value);
-      hours = `${slotLabel(settings.open_time)} – ${slotLabel(settings.close_time)}`;
+      hours = `${timeLabel(settings.open_time)} – ${timeLabel(settings.close_time)}`;
       if (!settings.enabled) {
         closedMessage = "Pre-ordering is currently closed. Please order at the counter.";
       } else {

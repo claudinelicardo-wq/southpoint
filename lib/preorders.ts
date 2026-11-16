@@ -58,16 +58,22 @@ function toMinutes(hhmm: string): number {
   return h * 60 + m;
 }
 
+function formatMinutes(mins: number): string {
+  const hh = Math.floor(mins / 60) % 24;
+  const ampm = hh < 12 ? "AM" : "PM";
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mins % 60).padStart(2, "0")} ${ampm}`;
+}
+
+/** A single clock time, e.g. "07:30" → "7:30 AM". */
+export function timeLabel(hhmm: string): string {
+  return formatMinutes(toMinutes(hhmm));
+}
+
+/** A 30-minute pickup window, e.g. "07:30" → "7:30 AM – 8:00 AM". */
 export function slotLabel(hhmm: string): string {
-  const [h, m] = hhmm.split(":").map(Number);
-  const end = h * 60 + m + 30;
-  const fmt = (mins: number) => {
-    const hh = Math.floor(mins / 60) % 24;
-    const ampm = hh < 12 ? "AM" : "PM";
-    const h12 = hh % 12 === 0 ? 12 : hh % 12;
-    return `${h12}:${String(mins % 60).padStart(2, "0")} ${ampm}`;
-  };
-  return `${fmt(h * 60 + m)} – ${fmt(end)}`;
+  const start = toMinutes(hhmm);
+  return `${formatMinutes(start)} – ${formatMinutes(start + 30)}`;
 }
 
 /**
