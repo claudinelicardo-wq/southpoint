@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
 import { EmptyState } from "@/components/ui/empty-state";
-import { Field, Input, Textarea } from "@/components/ui/input";
+import { Field, Input, Switch, Textarea } from "@/components/ui/input";
 import { Table, TBody, TD, TH, THead, TR } from "@/components/ui/table";
 import { formatDate, formatQty } from "@/lib/format";
 import { createClient } from "@/lib/supabase/client";
@@ -23,6 +23,11 @@ type LoyaltyEmbed =
 export interface CustomerRow {
   id: string;
   full_name: string;
+  first_name: string | null;
+  last_name: string | null;
+  member_no: string;
+  member_status: "active" | "suspended";
+  marketing_consent: boolean;
   mobile: string | null;
   email: string | null;
   birthday: string | null;
@@ -38,7 +43,9 @@ function pointsOf(row: CustomerRow): number {
 }
 
 interface CustomerForm {
-  full_name: string;
+  first_name: string;
+  last_name: string;
+  marketing_consent: boolean;
   mobile: string;
   email: string;
   birthday: string;
@@ -46,7 +53,9 @@ interface CustomerForm {
 }
 
 const EMPTY_FORM: CustomerForm = {
-  full_name: "",
+  first_name: "",
+  last_name: "",
+  marketing_consent: false,
   mobile: "",
   email: "",
   birthday: "",
@@ -70,6 +79,7 @@ export function CustomersManager({
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [adjusting, setAdjusting] = useState<CustomerRow | null>(null);
+  const [changingStatus, setChangingStatus] = useState<CustomerRow | null>(null);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -77,6 +87,7 @@ export function CustomersManager({
     return customers.filter(
       (c) =>
         c.full_name.toLowerCase().includes(q) ||
+        c.member_no.toLowerCase().includes(q) ||
         (c.mobile ?? "").toLowerCase().includes(q) ||
         (c.email ?? "").toLowerCase().includes(q),
     );
@@ -92,7 +103,9 @@ export function CustomersManager({
   function openEdit(c: CustomerRow) {
     setEditing(c);
     setForm({
-      full_name: c.full_name,
+      first_name: c.first_name ?? c.full_name,
+      last_name: c.last_name ?? "",
+      marketing_consent: c.marketing_consent,
       mobile: c.mobile ?? "",
       email: c.email ?? "",
       birthday: c.birthday ?? "",
@@ -108,8 +121,14 @@ export function CustomersManager({
     setError(null);
     const supabase = createClient();
 
+    const consentChanged = !editing || editing.marketing_consent !== form.marketing_consent;
     const payload = {
-      full_name: form.full_name.trim(),
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      marketing_consent: form.marketing_consent,
+      ...(consentChanged
+        ? { marketing_consent_at: form.marketing_consent ? new Date().toISOString() : null }
+        : {}),
       mobile: form.mobile.trim() || null,
       email: form.email.trim() || null,
       birthday: form.birthday || null,
@@ -122,7 +141,11 @@ export function CustomersManager({
 
     setSaving(false);
     if (dbError) {
-      setError(dbError.message);
+      setError(
+        dbError.message.includes("customers_mobile_unique")
+          ? "That mobile number already belongs to another member."
+          : dbError.message,
+      );
       return;
     }
     setFormOpen(false);
@@ -134,12 +157,14 @@ export function CustomersManager({
       {preview && (
         <Alert tone="warning">Customer profiles need a connected Supabase project.</Alert>
       )}
-      {error && !formOpen && !adjusting && <Alert tone="danger">{error}</Alert>}
+      {error && !formOpen && !adjusting && !changingStatus && (
+        <Alert tone="danger">{error}</Alert>
+      )}
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         <Input
           type="search"
-          placeholder="Search name, mobile, or email…"
+          placeholder="Search name, member no., mobile, or email…"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="max-w-xs"
@@ -182,6 +207,14 @@ export function CustomersManager({
                 <TR key={c.id}>
                   <TD className="font-medium text-espresso">
                     {c.full_name}
+                    {c.member_status === "suspended" && (
+                      <Badge tone="danger" className="ml-2">
+                        Suspended
+                      </Badge>
+                    )}
+                    <span className="block font-mono text-xs font-normal text-latte">
+                      {c.member_no}
+                    </span>
                     {c.notes && <span className="block text-xs text-latte">{c.notes}</span>}
                   </TD>
                   <TD className="text-latte">{c.mobile || "—"}</TD>
@@ -216,6 +249,18 @@ export function CustomersManager({
                         >
                           Adjust points
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className={c.member_status === "active" ? "text-danger" : undefined}
+                          onClick={() => {
+                            setError(null);
+                            setChangingStatus(c);
+                          }}
+                          disabled={preview}
+                        >
+                          {c.member_status === "active" ? "Suspend" : "Reactivate"}
+                        </Button>
                       </>
                     )}
                   </TD>
@@ -235,16 +280,27 @@ export function CustomersManager({
       >
         <form onSubmit={save} className="space-y-4">
           {error && <Alert tone="danger">{error}</Alert>}
-          <Field label="Full name">
-            <Input
-              required
-              value={form.full_name}
-              onChange={(e) => setForm({ ...form, full_name: e.target.value })}
-            />
-          </Field>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Mobile">
+            <Field label="First name">
               <Input
+                required
+                value={form.first_name}
+                onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+              />
+            </Field>
+            <Field label="Last name">
+              <Input
+                required={!editing}
+                value={form.last_name}
+                onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+              />
+            </Field>
+            <Field label="Mobile" hint="One membership per number.">
+              <Input
+                type="tel"
+                inputMode="tel"
+                required={!editing}
+                placeholder="09XX XXX XXXX"
                 value={form.mobile}
                 onChange={(e) => setForm({ ...form, mobile: e.target.value })}
               />
@@ -264,6 +320,11 @@ export function CustomersManager({
               />
             </Field>
           </div>
+          <Switch
+            checked={form.marketing_consent}
+            onChange={(v) => setForm({ ...form, marketing_consent: v })}
+            label="Agreed to receive promos and updates"
+          />
           <Field label="Notes">
             <Textarea
               value={form.notes}
@@ -280,6 +341,17 @@ export function CustomersManager({
           </div>
         </form>
       </Dialog>
+
+      {changingStatus && (
+        <MemberStatusDialog
+          customer={changingStatus}
+          onClose={() => setChangingStatus(null)}
+          onDone={() => {
+            setChangingStatus(null);
+            router.refresh();
+          }}
+        />
+      )}
 
       {adjusting && (
         <AdjustPointsDialog
@@ -367,6 +439,66 @@ function AdjustPointsDialog({
           </Button>
           <Button type="submit" loading={busy}>
             Apply adjustment
+          </Button>
+        </div>
+      </form>
+    </Dialog>
+  );
+}
+
+function MemberStatusDialog({
+  customer,
+  onClose,
+  onDone,
+}: {
+  customer: CustomerRow;
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const suspending = customer.member_status === "active";
+  const [reason, setReason] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    const { error: rpcError } = await createClient().rpc("loyalty_member_set_status", {
+      p_customer: customer.id,
+      p_status: suspending ? "suspended" : "active",
+      p_reason: reason,
+    });
+    setLoading(false);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    onDone();
+  }
+
+  return (
+    <Dialog
+      open
+      onClose={onClose}
+      title={`${suspending ? "Suspend" : "Reactivate"} ${customer.full_name}`}
+      description={
+        suspending
+          ? "A suspended member keeps their points but cannot earn or redeem until reactivated."
+          : "The member can earn and redeem points again."
+      }
+    >
+      <form onSubmit={submit} className="space-y-4">
+        {error && <Alert tone="danger">{error}</Alert>}
+        <Field label="Reason (recorded in audit log)">
+          <Input required value={reason} onChange={(e) => setReason(e.target.value)} />
+        </Field>
+        <div className="flex justify-end gap-2 pt-1">
+          <Button variant="ghost" onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+          <Button type="submit" variant={suspending ? "danger" : "primary"} loading={loading}>
+            {suspending ? "Suspend member" : "Reactivate member"}
           </Button>
         </div>
       </form>

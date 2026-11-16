@@ -642,7 +642,9 @@ function LoyaltyForm({
     enabled: Boolean(value.enabled ?? true),
     // Kept as strings while editing — Number("") coercing to 0 on every
     // keystroke made the field snap back to "0" and block typing.
-    points_per_peso: String(value.points_per_peso ?? 0.02),
+    earn_points: String(value.earn_points ?? 1),
+    earn_per_amount: String(value.earn_per_amount ?? 100),
+    max_points_per_txn: String(value.max_points_per_txn ?? 0),
     min_purchase: String(value.min_purchase ?? 100),
     redemption_value_per_point: String(value.redemption_value_per_point ?? 1),
     max_redemption_pct: String(value.max_redemption_pct ?? 0.5),
@@ -660,9 +662,14 @@ function LoyaltyForm({
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
+          // Spread the stored value first so keys this form doesn't edit
+          // (product/category eligibility lists) survive a save.
           save("loyalty", {
+            ...value,
             ...form,
-            points_per_peso: Number(form.points_per_peso) || 0,
+            earn_points: Number(form.earn_points) || 0,
+            earn_per_amount: Number(form.earn_per_amount) || 0,
+            max_points_per_txn: Number(form.max_points_per_txn) || 0,
             min_purchase: Number(form.min_purchase) || 0,
             redemption_value_per_point: Number(form.redemption_value_per_point) || 0,
             max_redemption_pct: Number(form.max_redemption_pct) || 0,
@@ -679,14 +686,34 @@ function LoyaltyForm({
           label="Loyalty program enabled"
         />
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Points per peso" hint="0.02 = 1 point per ₱50">
+          <Field label="Points earned" hint="Whole points, awarded after payment.">
             <Input
               type="number"
-              step="0.001"
+              step="1"
               min="0"
-              value={form.points_per_peso}
+              value={form.earn_points}
               disabled={disabled}
-              onChange={(e) => setForm({ ...form, points_per_peso: e.target.value })}
+              onChange={(e) => setForm({ ...form, earn_points: e.target.value })}
+            />
+          </Field>
+          <Field label="For every (₱) spent" hint="1 point per ₱100: ₱480 earns 4.">
+            <Input
+              type="number"
+              step="1"
+              min="1"
+              value={form.earn_per_amount}
+              disabled={disabled}
+              onChange={(e) => setForm({ ...form, earn_per_amount: e.target.value })}
+            />
+          </Field>
+          <Field label="Max points per transaction" hint="0 = no limit">
+            <Input
+              type="number"
+              step="1"
+              min="0"
+              value={form.max_points_per_txn}
+              disabled={disabled}
+              onChange={(e) => setForm({ ...form, max_points_per_txn: e.target.value })}
             />
           </Field>
           <Field label="Minimum purchase to earn (₱)">

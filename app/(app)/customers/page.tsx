@@ -21,7 +21,7 @@ export default async function CustomersPage() {
     const { data } = await supabase
       .from("customers")
       .select(
-        "id, full_name, mobile, email, birthday, notes, created_at, loyalty_accounts(points_balance)",
+        "id, full_name, first_name, last_name, member_no, member_status, marketing_consent, mobile, email, birthday, notes, created_at, loyalty_accounts(points_balance)",
       )
       .is("archived_at", null)
       .order("full_name")

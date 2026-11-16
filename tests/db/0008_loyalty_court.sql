@@ -10,7 +10,7 @@ insert into auth.users (id, email, raw_user_meta_data) values
 -- enable loyalty with easy math: 1 point per ₱10, redeem ₱1/point, min ₱50
 reset role;
 update public.settings set value = jsonb_build_object(
-  'enabled', true, 'points_per_peso', 0.1, 'min_purchase', 50,
+  'enabled', true, 'earn_points', 1, 'earn_per_amount', 10, 'min_purchase', 50,
   'redemption_value_per_point', 1, 'max_redemption_pct', 0.5,
   'points_expiry_days', 365, 'birthday_bonus_points', 50)
 where key = 'loyalty';

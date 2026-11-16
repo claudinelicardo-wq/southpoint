@@ -13,7 +13,9 @@ export const metadata = { title: "Loyalty" };
 
 interface LoyaltyConfig {
   enabled?: boolean;
-  points_per_peso?: number;
+  earn_points?: number;
+  earn_per_amount?: number;
+  max_points_per_txn?: number;
   min_purchase?: number;
   redemption_value_per_point?: number;
   max_redemption_pct?: number;
@@ -166,7 +168,13 @@ export default async function LoyaltyPage() {
                 </Badge>
               </div>
               <dl className="space-y-2 text-sm">
-                <Rule label="Earn rate" value={`${formatQty(cfg.points_per_peso ?? 0)} pt / ₱1`} />
+                <Rule
+                  label="Earn rate"
+                  value={`${formatQty(cfg.earn_points ?? 0)} pt per ${formatPeso(cfg.earn_per_amount ?? 0)}`}
+                />
+                {(cfg.max_points_per_txn ?? 0) > 0 && (
+                  <Rule label="Max per transaction" value={`${formatQty(cfg.max_points_per_txn ?? 0)} pts`} />
+                )}
                 <Rule label="Minimum purchase" value={formatPeso(cfg.min_purchase ?? 0)} />
                 <Rule
                   label="Redemption value"
